@@ -1,0 +1,4 @@
+chainlit==2.3.0
+fastapi==0.115.6
+langchain==0.3.9
+langchain-openai==0.2.10
