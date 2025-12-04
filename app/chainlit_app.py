@@ -1,8 +1,7 @@
 import os
 
 import chainlit as cl
-from langchain_core.messages import HumanMessage, AIMessage
-from app.langchain_client import build_chain
+from app.openrouter_client import OpenRouterClient, build_nutrition_messages
 
 
 @cl.on_chat_start
@@ -11,12 +10,12 @@ async def on_chat_start():
     cl.user_session.set("history", [])
 
     try:
-        chain = build_chain()
+        client = OpenRouterClient()
     except Exception as exc:
-        await cl.Message(content=f"Не удалось инициализировать LLM: {exc}").send()
+        await cl.Message(content=f"Не удалось инициализировать OpenRouter клиент: {exc}").send()
         return
 
-    cl.user_session.set("chain", chain)
+    cl.user_session.set("client", client)
 
     model_name = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
     await cl.Message(
@@ -33,10 +32,10 @@ async def on_chat_start():
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    chain = cl.user_session.get("chain")
-    if not chain:
+    client = cl.user_session.get("client")
+    if not client:
         await cl.Message(
-            content="LLM не инициализирован. Перезапустите чат после установки API-ключа."
+            content="OpenRouter клиент не инициализирован. Перезапустите чат после установки API-ключа."
         ).send()
         return
 
@@ -44,11 +43,11 @@ async def on_message(message: cl.Message):
     history = cl.user_session.get("history", [])
 
     try:
-        # Вызываем цепочку с историей и текущим сообщением
-        data = await chain.ainvoke({
-            "input": message.content,
-            "history": history
-        })
+        # Формируем сообщения для API
+        messages = build_nutrition_messages(message.content, history)
+
+        # Получаем JSON-ответ от модели
+        data = await client.get_json_completion(messages)
 
         # Проверяем, завершён ли сбор требований
         is_complete = data.get("is_complete", False)
@@ -71,12 +70,12 @@ async def on_message(message: cl.Message):
 
         # Сохраняем сообщения в историю (только если message_text валидный)
         if message_text:
-            history.append(HumanMessage(content=message.content))
-            history.append(AIMessage(content=message_text))
+            history.append({"role": "user", "content": message.content})
+            history.append({"role": "assistant", "content": message_text})
             cl.user_session.set("history", history)
 
     except Exception as e:
-        # JsonOutputParser бросит ошибку, если JSON невалидный
+        # Обработка ошибок парсинга JSON или API
         await cl.Message(
             content=f"❌ Ошибка обработки ответа: {e}\n\nПопробуйте переформулировать запрос."
         ).send()
