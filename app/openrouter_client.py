@@ -15,12 +15,13 @@ class OpenRouterClient:
 
         self.model = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
         self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-        self.temperature = 0.3
+        self.default_temperature = 0.3
 
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
-        response_format: Optional[Dict[str, Any]] = None
+        response_format: Optional[Dict[str, Any]] = None,
+        temperature: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Отправляет запрос к OpenRouter API и возвращает ответ.
@@ -42,7 +43,7 @@ class OpenRouterClient:
         payload = {
             "model": self.model,
             "messages": messages,
-            "temperature": self.temperature,
+            "temperature": temperature if temperature is not None else self.default_temperature,
         }
 
         if response_format:
@@ -53,17 +54,26 @@ class OpenRouterClient:
             response.raise_for_status()
             return response.json()
 
-    async def get_completion_text(self, messages: List[Dict[str, str]]) -> str:
+    async def get_completion_text(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: Optional[float] = None
+    ) -> str:
         """Получает текстовый ответ от модели."""
-        result = await self.chat_completion(messages)
+        result = await self.chat_completion(messages, temperature=temperature)
         return result["choices"][0]["message"]["content"]
 
-    async def get_json_completion(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
+    async def get_json_completion(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: Optional[float] = None
+    ) -> Dict[str, Any]:
         """Получает JSON-ответ от модели."""
         # Добавляем response_format для JSON
         result = await self.chat_completion(
             messages,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            temperature=temperature
         )
         content = result["choices"][0]["message"]["content"]
 

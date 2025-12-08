@@ -52,6 +52,56 @@ SYSTEM_PROMPTS = {
     ),
 }
 
+async def handle_experiment_command(message: cl.Message):
+    """Обрабатывает команду /experiment для сравнения температур."""
+    client = cl.user_session.get("client")
+    if not client:
+        await cl.Message(content="OpenRouter клиент не инициализирован.").send()
+        return
+
+    # Парсинг команды: /experiment <ваш промпт>
+    parts = message.content.strip().split(maxsplit=1)
+
+    if len(parts) < 2:
+        await cl.Message(
+            content="❌ Укажите промпт для эксперимента.\n\n"
+                    "Пример: `/experiment Объясни что такое рекурсия`"
+        ).send()
+        return
+
+    prompt_text = parts[1]
+
+    # Температуры для эксперимента
+    temperatures = [0.1, 1.0, 1.5, 1.9]
+    # Показываем, что начался эксперимент
+    await cl.Message(
+        content=f"🧪 **Запускаю эксперимент с температурой**\n\n"
+                f"**Запрос:** \"{prompt_text}\"\n\n"
+                f"Ожидайте результаты для трёх температур {temperatures}"
+    ).send()
+
+
+
+    # Запуск запросов с разными температурами
+    for temp in temperatures:
+        try:
+            # Простое сообщение без истории для чистоты эксперимента
+            messages = [
+                {"role": "system", "content": "Отвечай кратко, 5 предложений. Не размышляй ответь быстро не думая"},
+                {"role": "user", "content": prompt_text}]
+
+            # Получаем ответ с конкретной температурой
+            response = await client.get_completion_text(messages, temperature=temp)
+
+            await cl.Message(
+                content=f"---\n\n### **Temperature = {temp}\n\n{response}"
+            ).send()
+
+        except Exception as e:
+            await cl.Message(
+                content=f"❌ Ошибка при температуре {temp}: {e}"
+            ).send()
+
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -84,13 +134,14 @@ async def on_chat_start():
     model_name = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
     await cl.Message(
         content=(
-            "🎄 AI Advent Challenge — Задание 4\n\n"
-            "**Тестирование различных system prompts**\n\n"
-            "Вы можете изменить роль агента в настройках (⚙️ в верхнем правом углу):\n"
-            "- **strict_teacher** — строгий преподаватель Python\n"
-            "- **friendly_mentor** — дружелюбный наставник\n"
-            "- **code_reviewer** — критичный код-ревьюер\n\n"
-            "История диалога сохраняется при смене роли!\n\n"
+            "🎄 AI Advent Challenge — Задание 5\n\n"
+            "**Эксперимент с температурой**\n\n"
+            "Вы можете:\n"
+            "1. Изменить роль агента в настройках (⚙️)\n"
+            "2. Запустить эксперимент с температурой:\n"
+            "   `/experiment <ваш промпт>`\n\n"
+            "Эксперимент запускает ваш промпт с разными температурам:\n"
+            "**Пример:** `/experiment Как Пушкин умер от туберкулеза`\n\n"
             f"_Модель: {model_name}_"
         )
     ).send()
@@ -116,6 +167,11 @@ async def on_settings_update(settings):
 
 @cl.on_message
 async def on_message(message: cl.Message):
+    # Проверка на команду /experiment
+    if message.content.strip().startswith("/experiment"):
+        await handle_experiment_command(message)
+        return
+
     client = cl.user_session.get("client")
     if not client:
         await cl.Message(
