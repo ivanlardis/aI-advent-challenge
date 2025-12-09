@@ -1,5 +1,7 @@
+import asyncio
 import json
 import os
+import time
 from typing import List, Dict, Any, Optional
 
 import httpx
@@ -21,7 +23,8 @@ class OpenRouterClient:
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, Any]] = None,
-        temperature: Optional[float] = None
+        temperature: Optional[float] = None,
+        model: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Отправляет запрос к OpenRouter API и возвращает ответ.
@@ -41,7 +44,7 @@ class OpenRouterClient:
         }
 
         payload = {
-            "model": self.model,
+            "model": model if model is not None else self.model,
             "messages": messages,
             "temperature": temperature if temperature is not None else self.default_temperature,
         }
@@ -95,6 +98,94 @@ class OpenRouterClient:
                         raise ValueError(f"Не удалось распарсить JSON из ответа: {content}") from e
 
             raise ValueError(f"Не удалось найти JSON в ответе: {content}")
+
+    async def compare_models(
+        self,
+        messages: List[Dict[str, str]],
+        models: List[str],
+        temperature: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Выполняет запросы к нескольким моделям параллельно через asyncio.gather().
+
+        Args:
+            messages: Список сообщений для отправки всем моделям
+            models: Список имён моделей для сравнения
+            temperature: Температура для генерации (опционально)
+
+        Returns:
+            Список словарей с результатами для каждой модели:
+            {
+                "model": str,
+                "response": str,
+                "execution_time": float,
+                "prompt_tokens": int,
+                "completion_tokens": int,
+                "total_tokens": int,
+                "cost_usd": Optional[float],
+                "error": Optional[str]
+            }
+        """
+
+        async def query_single_model(model: str) -> Dict[str, Any]:
+            """Запрашивает одну модель с замером времени и обработкой ошибок."""
+            result = {
+                "model": model,
+                "response": None,
+                "execution_time": 0.0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": None,
+                "error": None
+            }
+
+            try:
+                start_time = time.time()
+
+                # Выполняем запрос с конкретной моделью
+                api_response = await self.chat_completion(
+                    messages=messages,
+                    temperature=temperature,
+                    model=model
+                )
+
+                end_time = time.time()
+                result["execution_time"] = round(end_time - start_time, 2)
+
+                # Извлекаем ответ
+                result["response"] = api_response["choices"][0]["message"]["content"]
+
+                # Извлекаем usage (если есть)
+                usage = api_response.get("usage", {})
+                result["prompt_tokens"] = usage.get("prompt_tokens", 0)
+                result["completion_tokens"] = usage.get("completion_tokens", 0)
+                result["total_tokens"] = usage.get("total_tokens", 0)
+
+                # Извлекаем стоимость (если есть в data.cost)
+                data = api_response.get("data", {})
+                if "cost" in data:
+                    result["cost_usd"] = data["cost"]
+
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429:
+                    result["error"] = "Rate limit exceeded"
+                elif e.response.status_code == 404:
+                    result["error"] = "Model not found"
+                else:
+                    result["error"] = f"HTTP {e.response.status_code}"
+            except httpx.TimeoutException:
+                result["error"] = "Request timeout"
+            except Exception as e:
+                result["error"] = str(e)
+
+            return result
+
+        # Параллельное выполнение запросов
+        tasks = [query_single_model(model) for model in models]
+        results = await asyncio.gather(*tasks)
+
+        return results
 
 
 def build_messages(user_input: str, history: List[Dict[str, str]], system_prompt: str) -> List[Dict[str, str]]:

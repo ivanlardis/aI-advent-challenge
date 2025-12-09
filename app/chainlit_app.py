@@ -1,4 +1,5 @@
 import os
+from typing import List, Dict, Any
 
 import chainlit as cl
 from app.openrouter_client import OpenRouterClient, build_messages
@@ -103,6 +104,100 @@ async def handle_experiment_command(message: cl.Message):
             ).send()
 
 
+def format_comparison_results(results: List[Dict[str, Any]], prompt: str) -> str:
+    """Форматирует результаты в Markdown таблицу + детальные ответы."""
+
+    output = f"# 🔬 Результаты сравнения моделей\n\n"
+    output += f"**Промпт:** \"{prompt}\"\n\n"
+
+    # Таблица метрик
+    output += "## 📊 Метрики производительности\n\n"
+    output += "| Модель | Время (сек) | Токены (вход/выход) | Всего | Стоимость | Статус |\n"
+    output += "|--------|-------------|---------------------|-------|-----------|--------|\n"
+
+    for result in results:
+        model_name = result["model"].split("/")[-1]
+        exec_time = result["execution_time"]
+        prompt_tok = result["prompt_tokens"]
+        compl_tok = result["completion_tokens"]
+        total_tok = result["total_tokens"]
+        cost = f"${result['cost_usd']:.6f}" if result['cost_usd'] else "FREE"
+        status = "❌ ERROR" if result["error"] else "✅ OK"
+
+        output += f"| {model_name} | {exec_time} | {prompt_tok}/{compl_tok} | {total_tok} | {cost} | {status} |\n"
+
+    # Детальные ответы
+    output += "\n---\n\n## 💬 Ответы моделей\n\n"
+
+    for idx, result in enumerate(results, 1):
+        model_name = result["model"]
+
+        if result["error"]:
+            output += f"### {idx}. {model_name} ❌\n\n**Ошибка:** {result['error']}\n\n"
+        else:
+            output += f"### {idx}. {model_name}\n\n{result['response']}\n\n"
+
+    # Анализ
+    output += "---\n\n## 📈 Анализ\n\n"
+
+    successful = [r for r in results if not r["error"]]
+    if successful:
+        fastest = min(successful, key=lambda x: x["execution_time"])
+        output += f"- **Самая быстрая:** {fastest['model']} ({fastest['execution_time']} сек)\n"
+
+        most_efficient = min(successful, key=lambda x: x["total_tokens"])
+        output += f"- **Самая экономная:** {most_efficient['model']} ({most_efficient['total_tokens']} токенов)\n"
+
+    return output
+
+
+async def handle_compare_command(message: cl.Message):
+    """Обрабатывает команду /compare для сравнения моделей."""
+    client = cl.user_session.get("client")
+    if not client:
+        await cl.Message(content="OpenRouter клиент не инициализирован.").send()
+        return
+
+    # Парсинг: /compare <промпт>
+    parts = message.content.strip().split(maxsplit=1)
+
+    if len(parts) < 2:
+        await cl.Message(
+            content="❌ Укажите промпт.\n\nПример: `/compare Объясни рекурсию`"
+        ).send()
+        return
+
+    prompt_text = parts[1]
+
+    # 4 модели для сравнения: дешёвая, ChatGPT, средняя китайская, текущая
+    models = [
+        "meta-llama/llama-3.2-3b-instruct:free",  # Самая дешёвая бесплатная
+        "openai/chatgpt-4o-latest",                # ChatGPT последний
+        "qwen/qwen-2.5-72b-instruct",              # Средняя китайская модель
+        "tngtech/deepseek-r1t2-chimera:free"       # Текущая baseline
+    ]
+
+    # Уведомление о запуске
+    await cl.Message(
+        content=f"🔬 **Запускаю сравнение {len(models)} моделей**\n\n"
+                f"Промпт: \"{prompt_text}\"\n\nОжидайте..."
+    ).send()
+
+    # Формируем сообщения
+    messages = [
+        {"role": "system", "content": "Отвечай кратко и по существу."},
+        {"role": "user", "content": prompt_text}
+    ]
+
+    # Запускаем сравнение
+    try:
+        results = await client.compare_models(messages, models, temperature=0.3)
+        formatted_output = format_comparison_results(results, prompt_text)
+        await cl.Message(content=formatted_output).send()
+    except Exception as e:
+        await cl.Message(content=f"❌ Ошибка: {e}").send()
+
+
 @cl.on_chat_start
 async def on_chat_start():
     # Простой список для истории сообщений
@@ -134,14 +229,13 @@ async def on_chat_start():
     model_name = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
     await cl.Message(
         content=(
-            "🎄 AI Advent Challenge — Задание 5\n\n"
-            "**Эксперимент с температурой**\n\n"
-            "Вы можете:\n"
-            "1. Изменить роль агента в настройках (⚙️)\n"
-            "2. Запустить эксперимент с температурой:\n"
-            "   `/experiment <ваш промпт>`\n\n"
-            "Эксперимент запускает ваш промпт с разными температурам:\n"
-            "**Пример:** `/experiment Как Пушкин умер от туберкулеза`\n\n"
+            "🎄 AI Advent Challenge — Задания 5, 6, 7\n\n"
+            "**Доступные команды:**\n\n"
+            "1. `/experiment <промпт>` — эксперимент с температурой\n"
+            "   Пример: `/experiment Объясни рекурсию`\n\n"
+            "2. `/compare <промпт>` — сравнение 4 моделей\n"
+            "   Пример: `/compare Что такое ООП в 3 предложениях`\n\n"
+            "3. Обычный диалог с выбором роли агента (⚙️)\n\n"
             f"_Модель: {model_name}_"
         )
     ).send()
@@ -167,6 +261,11 @@ async def on_settings_update(settings):
 
 @cl.on_message
 async def on_message(message: cl.Message):
+    # Проверка на команду /compare
+    if message.content.strip().startswith("/compare"):
+        await handle_compare_command(message)
+        return
+
     # Проверка на команду /experiment
     if message.content.strip().startswith("/experiment"):
         await handle_experiment_command(message)
