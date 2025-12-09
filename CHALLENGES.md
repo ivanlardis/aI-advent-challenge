@@ -124,10 +124,15 @@
   - Функция `format_comparison_results()` для форматирования в Markdown
   - Интеграция команды `/compare` через проверку в `@cl.on_message`
 - Модели для сравнения:
-  - `meta-llama/llama-3.2-3b-instruct:free` — самая дешёвая бесплатная модель (3B параметров)
-  - `openai/chatgpt-4o-latest` — последний ChatGPT (платная, для сравнения качества)
-  - `qwen/qwen-2.5-72b-instruct` — средняя китайская модель Qwen 2.5 (72B параметров)
-  - `tngtech/deepseek-r1t2-chimera:free` — текущая baseline модель
+  - `nvidia/nemotron-nano-12b-v2-vl:free` — бесплатная модель Nvidia (12B параметров)
+  - `openai/chatgpt-4o-latest` — последний ChatGPT ($5/$15 за 1M токенов prompt/completion)
+  - `qwen/qwen-2.5-72b-instruct` — средняя китайская модель Qwen 2.5 ($0.07/$0.26 за 1M токенов)
+  - `tngtech/deepseek-r1t2-chimera:free` — текущая baseline модель (бесплатная)
+- Расчёт стоимости:
+  - Прайс-лист встроен в код на основе данных из OpenRouter API
+  - Формула: `(prompt_tokens / 1_000_000) * prompt_price + (completion_tokens / 1_000_000) * completion_price`
+  - Бесплатные модели отображаются как "FREE"
+  - Платные модели показывают реальную стоимость запроса в USD
 - Примеры использования:
   - `/compare Объясни ООП в 3 предложениях`
   - `/compare Напиши функцию быстрой сортировки на Python`

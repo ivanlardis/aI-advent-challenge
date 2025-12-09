@@ -10,6 +10,15 @@ import httpx
 class OpenRouterClient:
     """HTTP-клиент для работы с OpenRouter API."""
 
+    # Прайс-лист моделей (цены за 1M токенов)
+    # Источник: https://openrouter.ai/api/v1/models
+    MODEL_PRICING = {
+        "nvidia/nemotron-nano-12b-v2-vl:free": {"prompt": 0.0, "completion": 0.0},
+        "openai/chatgpt-4o-latest": {"prompt": 5.0, "completion": 15.0},
+        "qwen/qwen-2.5-72b-instruct": {"prompt": 0.07, "completion": 0.26},
+        "tngtech/deepseek-r1t2-chimera:free": {"prompt": 0.0, "completion": 0.0},
+    }
+
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
         if not self.api_key:
@@ -18,6 +27,29 @@ class OpenRouterClient:
         self.model = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
         self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         self.default_temperature = 0.3
+
+    def calculate_cost(self, model: str, prompt_tokens: int, completion_tokens: int) -> Optional[float]:
+        """
+        Рассчитывает стоимость запроса на основе количества токенов.
+
+        Args:
+            model: Имя модели
+            prompt_tokens: Количество токенов в промпте
+            completion_tokens: Количество токенов в ответе
+
+        Returns:
+            Стоимость в USD или None для бесплатных моделей
+        """
+        pricing = self.MODEL_PRICING.get(model)
+        if not pricing:
+            return None
+
+        prompt_cost = (prompt_tokens / 1_000_000) * pricing["prompt"]
+        completion_cost = (completion_tokens / 1_000_000) * pricing["completion"]
+        total_cost = prompt_cost + completion_cost
+
+        # Возвращаем None для бесплатных моделей
+        return total_cost if total_cost > 0 else None
 
     async def chat_completion(
         self,
@@ -162,10 +194,12 @@ class OpenRouterClient:
                 result["completion_tokens"] = usage.get("completion_tokens", 0)
                 result["total_tokens"] = usage.get("total_tokens", 0)
 
-                # Извлекаем стоимость (если есть в data.cost)
-                data = api_response.get("data", {})
-                if "cost" in data:
-                    result["cost_usd"] = data["cost"]
+                # Рассчитываем стоимость на основе прайс-листа
+                result["cost_usd"] = self.calculate_cost(
+                    model=model,
+                    prompt_tokens=result["prompt_tokens"],
+                    completion_tokens=result["completion_tokens"]
+                )
 
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429:

@@ -169,10 +169,10 @@ async def handle_compare_command(message: cl.Message):
 
     prompt_text = parts[1]
 
-    # 4 модели для сравнения: дешёвая, ChatGPT, средняя китайская, текущая
+    # 4 модели для сравнения: бесплатная, ChatGPT, средняя китайская, текущая
     models = [
-        "meta-llama/llama-3.2-3b-instruct:free",  # Самая дешёвая бесплатная
-        "openai/chatgpt-4o-latest",                # ChatGPT последний
+        "nvidia/nemotron-nano-12b-v2-vl:free",     # Бесплатная Nvidia модель
+        "openai/chatgpt-4o-latest",                # ChatGPT последний (платная)
         "qwen/qwen-2.5-72b-instruct",              # Средняя китайская модель
         "tngtech/deepseek-r1t2-chimera:free"       # Текущая baseline
     ]
