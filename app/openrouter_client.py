@@ -221,6 +221,90 @@ class OpenRouterClient:
 
         return results
 
+    async def token_length_experiment(self) -> List[Dict[str, Any]]:
+        """
+        Эксперимент с длиной запросов на самой дешёвой модели.
+
+        Сценарии:
+          1) Короткий запрос
+          2) Длинный запрос
+          3) Очень длинный запрос, который с высокой вероятностью превысит лимит модели
+
+        Для каждого сценария возвращаются:
+          - usage.prompt_tokens / completion_tokens / total_tokens (если запрос прошёл)
+          - полный запрос пользователя
+          - полный ответ модели или текст ошибки
+        """
+
+        # Явно фиксируем самую дешёвую модель
+        model_name = "nvidia/nemotron-nano-12b-v2-vl:free"
+        system_prompt = "Ты — полезный ассистент. Отвечай по-русски."
+
+        async def run_case(case_id: str, description: str, user_content: str) -> Dict[str, Any]:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ]
+
+            result: Dict[str, Any] = {
+                "case": case_id,
+                "description": description,
+                "model": model_name,
+                "user_prompt": user_content,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "response": None,
+                "error": None,
+            }
+
+            try:
+                api_response = await self.chat_completion(
+                    messages=messages,
+                    model=model_name,
+                    temperature=0.3,
+                )
+
+                usage = api_response.get("usage", {})
+                result["prompt_tokens"] = usage.get("prompt_tokens", 0)
+                result["completion_tokens"] = usage.get("completion_tokens", 0)
+                result["total_tokens"] = usage.get("total_tokens", 0)
+
+                content = api_response["choices"][0]["message"]["content"]
+                # Сохраняем полный ответ модели
+                result["response"] = content
+
+            except httpx.HTTPStatusError as e:
+                result["error"] = f"HTTP {e.response.status_code}: {e.response.text}"
+            except httpx.TimeoutException:
+                result["error"] = "Request timeout"
+            except Exception as e:
+                result["error"] = str(e)
+
+            return result
+
+        # 1. Короткий запрос
+        short_user = "Кратко объясни, что такое рекурсия одним предложением."
+
+        # 2. Длинный запрос — развёрнутое объяснение с примерами
+        long_paragraph = (
+            "Представь, что ты пишешь главу учебника по программированию для начинающих. "
+            "Подробно объясни, что такое рекурсия, какие у неё преимущества и недостатки, "
+            "приведи несколько разных примеров на Python и опиши типичные ошибки начинающих. "
+        )
+        long_user = long_paragraph * 6  # несколько абзацев, заметно больше токенов
+
+        # 3. Очень длинный запрос — многократно повторяем текст, чтобы приблизиться к лимиту модели
+        very_long_user = long_paragraph * 80
+
+        results = [
+            await run_case("short", "Короткий запрос", short_user),
+            await run_case("long", "Длинный запрос", long_user),
+            await run_case("over_limit", "Очень длинный запрос (потенциально сверх лимита)", very_long_user),
+        ]
+
+        return results
+
 
 def build_messages(user_input: str, history: List[Dict[str, str]], system_prompt: str) -> List[Dict[str, str]]:
     """

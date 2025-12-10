@@ -104,6 +104,87 @@ async def handle_experiment_command(message: cl.Message):
             ).send()
 
 
+def format_token_experiment_results(results: List[Dict[str, Any]]) -> str:
+    """Форматирует результаты эксперимента по длине запросов."""
+
+    if not results:
+        return "❌ Не удалось выполнить эксперимент по токенам."
+
+    model_name = results[0].get("model", "unknown")
+
+    output = f"# 🧮 Эксперимент с длиной запросов\n\n"
+    output += f"Модель: **{model_name}** (самая дешёвая из списка)\n\n"
+
+    # Таблица с токенами (по данным usage от модели)
+    output += "## 📊 Токены для разных запросов\n\n"
+    output += "| Сценарий | prompt_tokens (вход) | completion_tokens (выход) | total_tokens | Статус |\n"
+    output += "|----------|----------------------|---------------------------|--------------|--------|\n"
+
+    for r in results:
+        case_name = {
+            "short": "Короткий",
+            "long": "Длинный",
+            "over_limit": "Очень длинный",
+        }.get(r["case"], r["case"])
+
+        prompt_tok = r["prompt_tokens"]
+        compl_tok = r["completion_tokens"]
+        total_tok = r["total_tokens"]
+        status = "❌ ERROR" if r["error"] else "✅ OK"
+
+        output += f"| {case_name} | {prompt_tok} | {compl_tok} | {total_tok} | {status} |\n"
+
+    # Детали по каждому сценарию
+    output += "\n---\n\n## 💬 Поведение модели\n\n"
+
+    for r in results:
+        case_title = {
+            "short": "Короткий запрос",
+            "long": "Длинный запрос",
+            "over_limit": "Очень длинный запрос (потенциально сверх лимита)",
+        }.get(r["case"], r["case"])
+
+        output += f"### {case_title}\n\n"
+        output += f"**Описание:** {r['description']}\n\n"
+        output += f"**Входные токены (prompt_tokens):** {r['prompt_tokens']}\n\n"
+        output += f"**Выходные токены (completion_tokens):** {r['completion_tokens']}\n\n"
+        output += f"**Вопрос (полный запрос пользователя):**\n\n{r.get('user_prompt', '')}\n\n"
+
+        if r["error"]:
+            output += f"**Ошибка от API:** {r['error']}\n\n"
+        else:
+            full_response = r.get("response") or ""
+            output += f"**Полный ответ модели:**\n\n{full_response}\n\n"
+
+    return output
+
+
+async def handle_tokens_command(message: cl.Message):
+    """Обрабатывает команду /tokens для эксперимента с длиной запросов."""
+    client = cl.user_session.get("client")
+    if not client:
+        await cl.Message(content="OpenRouter клиент не инициализирован.").send()
+        return
+
+    await cl.Message(
+        content=(
+            "🧮 **Эксперимент с токенами**\n\n"
+            "Будут выполнены три запроса:\n"
+            "- короткий запрос\n"
+            "- длинный запрос\n"
+            "- очень длинный запрос (чтобы приблизиться к лимиту модели)\n\n"
+            "Ожидайте результаты..."
+        )
+    ).send()
+
+    try:
+        results = await client.token_length_experiment()
+        formatted = format_token_experiment_results(results)
+        await cl.Message(content=formatted).send()
+    except Exception as e:
+        await cl.Message(content=f"❌ Ошибка эксперимента с токенами: {e}").send()
+
+
 def format_comparison_results(results: List[Dict[str, Any]], prompt: str) -> str:
     """Форматирует результаты в Markdown таблицу + детальные ответы."""
 
@@ -229,13 +310,15 @@ async def on_chat_start():
     model_name = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
     await cl.Message(
         content=(
-            "🎄 AI Advent Challenge — Задания 5, 6, 7\n\n"
+            "🎄 AI Advent Challenge — Задания 5, 6, 7, 8\n\n"
             "**Доступные команды:**\n\n"
             "1. `/experiment <промпт>` — эксперимент с температурой\n"
             "   Пример: `/experiment Объясни рекурсию`\n\n"
             "2. `/compare <промпт>` — сравнение 4 моделей\n"
             "   Пример: `/compare Что такое ООП в 3 предложениях`\n\n"
-            "3. Обычный диалог с выбором роли агента (⚙️)\n\n"
+            "3. `/tokens` — эксперимент с количеством токенов\n"
+            "   Показывает, как меняется поведение модели на коротком, длинном и очень длинном запросе\n\n"
+            "4. Обычный диалог с выбором роли агента (⚙️)\n\n"
             f"_Модель: {model_name}_"
         )
     ).send()
@@ -269,6 +352,11 @@ async def on_message(message: cl.Message):
     # Проверка на команду /experiment
     if message.content.strip().startswith("/experiment"):
         await handle_experiment_command(message)
+        return
+
+    # Проверка на команду /tokens
+    if message.content.strip().startswith("/tokens"):
+        await handle_tokens_command(message)
         return
 
     client = cl.user_session.get("client")
