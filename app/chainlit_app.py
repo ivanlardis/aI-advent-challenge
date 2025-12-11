@@ -1,288 +1,144 @@
+import logging
 import os
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import chainlit as cl
+
 from app.openrouter_client import OpenRouterClient, build_messages
 
-# Предустановленные system prompts для тестирования
-SYSTEM_PROMPTS = {
-    "strict_teacher": (
-        "Ты — строгий преподаватель по Python. Твой стиль:\n"
-        "- Отвечаешь кратко и по существу\n"
-        "- Задаёшь наводящие вопросы вместо прямых ответов\n"
-        "- В конце каждого ответа даёшь мини-проверку (вопрос или задачу)\n"
-        "- Используешь формальный тон\n"
-        "- Не приводишь готовые решения, а помогаешь додуматься самостоятельно\n\n"
-        "ФОРМАТ ОТВЕТА (только валидный JSON):\n"
-        "{\n"
-        '  "is_complete": false,\n'
-        '  "message": "твой ответ или вопрос",\n'
-        '  "collected_info": {},\n'
-        '  "final_document": null\n'
-        "}"
-    ),
-    "friendly_mentor": (
-        "Ты — дружелюбный наставник для начинающих программистов. Твой стиль:\n"
-        "- Объясняешь простым языком, избегая сложных терминов\n"
-        "- Приводишь много примеров и аналогий из жизни\n"
-        "- Не задаёшь сложных вопросов, поддерживаешь ученика\n"
-        "- Используешь неформальный, дружеский тон\n"
-        "- Поощряешь любые попытки и прогресс\n\n"
-        "ФОРМАТ ОТВЕТА (только валидный JSON):\n"
-        "{\n"
-        '  "is_complete": false,\n'
-        '  "message": "твой ответ с примерами и объяснениями",\n'
-        '  "collected_info": {},\n'
-        '  "final_document": null\n'
-        "}"
-    ),
-    "code_reviewer": (
-        "Ты — критичный код-ревьюер. Твой стиль:\n"
-        "- Внимательно анализируешь код на наличие багов, уязвимостей и плохих практик\n"
-        "- Указываешь на проблемы с производительностью и читаемостью\n"
-        "- Предлагаешь конкретные улучшения с примерами\n"
-        "- Используешь профессиональный, но конструктивный тон\n"
-        "- Объясняешь, почему конкретное решение лучше\n\n"
-        "ФОРМАТ ОТВЕТА (только валидный JSON):\n"
-        "{\n"
-        '  "is_complete": false,\n'
-        '  "message": "твой детальный анализ кода",\n'
-        '  "collected_info": {},\n'
-        '  "final_document": null\n'
-        "}"
-    ),
-}
+DEFAULT_SYSTEM_PROMPT = os.getenv("DEFAULT_SYSTEM_PROMPT", "")
 
-async def handle_experiment_command(message: cl.Message):
-    """Обрабатывает команду /experiment для сравнения температур."""
-    client = cl.user_session.get("client")
-    if not client:
-        await cl.Message(content="OpenRouter клиент не инициализирован.").send()
-        return
-
-    # Парсинг команды: /experiment <ваш промпт>
-    parts = message.content.strip().split(maxsplit=1)
-
-    if len(parts) < 2:
-        await cl.Message(
-            content="❌ Укажите промпт для эксперимента.\n\n"
-                    "Пример: `/experiment Объясни что такое рекурсия`"
-        ).send()
-        return
-
-    prompt_text = parts[1]
-
-    # Температуры для эксперимента
-    temperatures = [0.1, 1.0, 1.5, 1.9]
-    # Показываем, что начался эксперимент
-    await cl.Message(
-        content=f"🧪 **Запускаю эксперимент с температурой**\n\n"
-                f"**Запрос:** \"{prompt_text}\"\n\n"
-                f"Ожидайте результаты для трёх температур {temperatures}"
-    ).send()
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
-
-    # Запуск запросов с разными температурами
-    for temp in temperatures:
-        try:
-            # Простое сообщение без истории для чистоты эксперимента
-            messages = [
-                {"role": "system", "content": "Отвечай кратко, 5 предложений. Не размышляй ответь быстро не думая"},
-                {"role": "user", "content": prompt_text}]
-
-            # Получаем ответ с конкретной температурой
-            response = await client.get_completion_text(messages, temperature=temp)
-
-            await cl.Message(
-                content=f"---\n\n### **Temperature = {temp}\n\n{response}"
-            ).send()
-
-        except Exception as e:
-            await cl.Message(
-                content=f"❌ Ошибка при температуре {temp}: {e}"
-            ).send()
+def format_history_for_summary(history: List[Dict[str, str]]) -> str:
+    """Преобразует историю в компактный текст для сжатия."""
+    formatted = []
+    for idx, item in enumerate(history, 1):
+        role = "Пользователь" if item["role"] == "user" else "Ассистент"
+        formatted.append(f"{idx}. {role}: {item['content']}")
+    return "\n".join(formatted)
 
 
-def format_token_experiment_results(results: List[Dict[str, Any]]) -> str:
-    """Форматирует результаты эксперимента по длине запросов."""
-
-    if not results:
-        return "❌ Не удалось выполнить эксперимент по токенам."
-
-    model_name = results[0].get("model", "unknown")
-
-    output = f"# 🧮 Эксперимент с длиной запросов\n\n"
-    output += f"Модель: **{model_name}** (самая дешёвая из списка)\n\n"
-
-    # Таблица с токенами (по данным usage от модели)
-    output += "## 📊 Токены для разных запросов\n\n"
-    output += "| Сценарий | prompt_tokens (вход) | completion_tokens (выход) | total_tokens | Статус |\n"
-    output += "|----------|----------------------|---------------------------|--------------|--------|\n"
-
-    for r in results:
-        case_name = {
-            "short": "Короткий",
-            "long": "Длинный",
-            "over_limit": "Очень длинный",
-        }.get(r["case"], r["case"])
-
-        prompt_tok = r["prompt_tokens"]
-        compl_tok = r["completion_tokens"]
-        total_tok = r["total_tokens"]
-        status = "❌ ERROR" if r["error"] else "✅ OK"
-
-        output += f"| {case_name} | {prompt_tok} | {compl_tok} | {total_tok} | {status} |\n"
-
-    # Детали по каждому сценарию
-    output += "\n---\n\n## 💬 Поведение модели\n\n"
-
-    for r in results:
-        case_title = {
-            "short": "Короткий запрос",
-            "long": "Длинный запрос",
-            "over_limit": "Очень длинный запрос (потенциально сверх лимита)",
-        }.get(r["case"], r["case"])
-
-        output += f"### {case_title}\n\n"
-        output += f"**Описание:** {r['description']}\n\n"
-        output += f"**Входные токены (prompt_tokens):** {r['prompt_tokens']}\n\n"
-        output += f"**Выходные токены (completion_tokens):** {r['completion_tokens']}\n\n"
-        output += f"**Вопрос (полный запрос пользователя):**\n\n{r.get('user_prompt', '')}\n\n"
-
-        if r["error"]:
-            output += f"**Ошибка от API:** {r['error']}\n\n"
-        else:
-            full_response = r.get("response") or ""
-            output += f"**Полный ответ модели:**\n\n{full_response}\n\n"
-
-    return output
+def shorten_text(text: str, limit: int = 80) -> str:
+    """Укорачивает текст до нужной длины для таблиц отчёта."""
+    single_line = " ".join(text.split())
+    if len(single_line) <= limit:
+        return single_line
+    return single_line[: limit - 1] + "…"
 
 
-async def handle_tokens_command(message: cl.Message):
-    """Обрабатывает команду /tokens для эксперимента с длиной запросов."""
-    client = cl.user_session.get("client")
-    if not client:
-        await cl.Message(content="OpenRouter клиент не инициализирован.").send()
-        return
+def format_usage_summary(usage_history: List[Dict[str, Any]]) -> str:
+    """Готовит Markdown-отчёт по токенам за диалог."""
+    total_prompt = sum(item.get("prompt_tokens", 0) for item in usage_history)
+    total_completion = sum(item.get("completion_tokens", 0) for item in usage_history)
+    total_tokens = sum(item.get("total_tokens", 0) for item in usage_history)
 
-    await cl.Message(
-        content=(
-            "🧮 **Эксперимент с токенами**\n\n"
-            "Будут выполнены три запроса:\n"
-            "- короткий запрос\n"
-            "- длинный запрос\n"
-            "- очень длинный запрос (чтобы приблизиться к лимиту модели)\n\n"
-            "Ожидайте результаты..."
+    lines = [
+        "📊 **Статистика токенов по диалогу**\n",
+        "| # | Пользователь | prompt | completion | total | ctx msgs | user len | assistant len | system len |",
+        "|---|--------------|--------|------------|-------|----------|----------|---------------|------------|",
+    ]
+
+    for idx, item in enumerate(usage_history, 1):
+        user_preview = shorten_text(item.get("user_message", ""), 70)
+        lines.append(
+            f"| {idx} | {user_preview} | "
+            f"{item.get('prompt_tokens', 0)} | "
+            f"{item.get('completion_tokens', 0)} | "
+            f"{item.get('total_tokens', 0)} | "
+            f"{item.get('history_messages', 0)} | "
+            f"{item.get('user_length', 0)} | "
+            f"{item.get('assistant_length', 0)} | "
+            f"{item.get('system_length', 0)} |"
         )
-    ).send()
 
-    try:
-        results = await client.token_length_experiment()
-        formatted = format_token_experiment_results(results)
-        await cl.Message(content=formatted).send()
-    except Exception as e:
-        await cl.Message(content=f"❌ Ошибка эксперимента с токенами: {e}").send()
+    lines.append("")
+    lines.append(
+        f"**Итого:** prompt {total_prompt} · completion {total_completion} · total {total_tokens} токенов"
+    )
 
-
-def format_comparison_results(results: List[Dict[str, Any]], prompt: str) -> str:
-    """Форматирует результаты в Markdown таблицу + детальные ответы."""
-
-    output = f"# 🔬 Результаты сравнения моделей\n\n"
-    output += f"**Промпт:** \"{prompt}\"\n\n"
-
-    # Таблица метрик
-    output += "## 📊 Метрики производительности\n\n"
-    output += "| Модель | Время (сек) | Токены (вход/выход) | Всего | Стоимость | Статус |\n"
-    output += "|--------|-------------|---------------------|-------|-----------|--------|\n"
-
-    for result in results:
-        model_name = result["model"].split("/")[-1]
-        exec_time = result["execution_time"]
-        prompt_tok = result["prompt_tokens"]
-        compl_tok = result["completion_tokens"]
-        total_tok = result["total_tokens"]
-        cost = f"${result['cost_usd']:.6f}" if result['cost_usd'] else "FREE"
-        status = "❌ ERROR" if result["error"] else "✅ OK"
-
-        output += f"| {model_name} | {exec_time} | {prompt_tok}/{compl_tok} | {total_tok} | {cost} | {status} |\n"
-
-    # Детальные ответы
-    output += "\n---\n\n## 💬 Ответы моделей\n\n"
-
-    for idx, result in enumerate(results, 1):
-        model_name = result["model"]
-
-        if result["error"]:
-            output += f"### {idx}. {model_name} ❌\n\n**Ошибка:** {result['error']}\n\n"
-        else:
-            output += f"### {idx}. {model_name}\n\n{result['response']}\n\n"
-
-    # Анализ
-    output += "---\n\n## 📈 Анализ\n\n"
-
-    successful = [r for r in results if not r["error"]]
-    if successful:
-        fastest = min(successful, key=lambda x: x["execution_time"])
-        output += f"- **Самая быстрая:** {fastest['model']} ({fastest['execution_time']} сек)\n"
-
-        most_efficient = min(successful, key=lambda x: x["total_tokens"])
-        output += f"- **Самая экономная:** {most_efficient['model']} ({most_efficient['total_tokens']} токенов)\n"
-
-    return output
+    return "\n".join(lines)
 
 
-async def handle_compare_command(message: cl.Message):
-    """Обрабатывает команду /compare для сравнения моделей."""
+async def handle_compress_command(message: cl.Message):
+    """Сжимает историю диалога в краткую сводку и заменяет историю."""
     client = cl.user_session.get("client")
     if not client:
         await cl.Message(content="OpenRouter клиент не инициализирован.").send()
         return
 
-    # Парсинг: /compare <промпт>
-    parts = message.content.strip().split(maxsplit=1)
-
-    if len(parts) < 2:
-        await cl.Message(
-            content="❌ Укажите промпт.\n\nПример: `/compare Объясни рекурсию`"
-        ).send()
+    history = cl.user_session.get("history", [])
+    if not history:
+        await cl.Message(content="ℹ️ История пуста — сжимать нечего.").send()
         return
 
-    prompt_text = parts[1]
+    logger.info("Command /compress: history_messages=%d", len(history))
+    await cl.Message(content="🗜️ Сжимаю историю диалога, это займёт пару секунд...").send()
 
-    # 4 модели для сравнения: бесплатная, ChatGPT, средняя китайская, текущая
-    models = [
-        "nvidia/nemotron-nano-12b-v2-vl:free",     # Бесплатная Nvidia модель
-        "openai/chatgpt-4o-latest",                # ChatGPT последний (платная)
-        "qwen/qwen-2.5-72b-instruct",              # Средняя китайская модель
-        "tngtech/deepseek-r1t2-chimera:free"       # Текущая baseline
-    ]
+    compression_prompt = (
+        "Ты помогаешь сжимать длинные диалоги для продолжения общения.\n"
+        "Сделай краткую, насыщенную фактами сводку: ключевые вводные пользователя, "
+        "задания, ограничения, решения ассистента. Без воды и новых рекомендаций."
+    )
 
-    # Уведомление о запуске
-    await cl.Message(
-        content=f"🔬 **Запускаю сравнение {len(models)} моделей**\n\n"
-                f"Промпт: \"{prompt_text}\"\n\nОжидайте..."
-    ).send()
-
-    # Формируем сообщения
+    formatted_history = format_history_for_summary(history)
     messages = [
-        {"role": "system", "content": "Отвечай кратко и по существу."},
-        {"role": "user", "content": prompt_text}
+        {"role": "system", "content": compression_prompt},
+        {
+            "role": "user",
+            "content": (
+                "Сожми историю ниже в 6-10 предложений или пунктов, сохранив все важные факты.\n\n"
+                f"{formatted_history}"
+            ),
+        },
     ]
 
-    # Запускаем сравнение
     try:
-        results = await client.compare_models(messages, models, temperature=0.3)
-        formatted_output = format_comparison_results(results, prompt_text)
-        await cl.Message(content=formatted_output).send()
+        summary_text = await client.get_completion_text(messages, temperature=0.2)
+
+        compressed_history = [
+            {
+                "role": "assistant",
+                "content": f"Краткая сводка предыдущего диалога: {summary_text.strip()}",
+            }
+        ]
+        cl.user_session.set("history", compressed_history)
+        logger.info("Command /compress completed. Summary_length=%d", len(summary_text))
+
+        await cl.Message(
+            content=(
+                "✅ История сжата и заменена краткой сводкой.\n\n"
+                f"{compressed_history[0]['content']}"
+            )
+        ).send()
     except Exception as e:
-        await cl.Message(content=f"❌ Ошибка: {e}").send()
+        logger.exception("Command /compress failed")
+        await cl.Message(content=f"❌ Не удалось сжать историю: {e}").send()
+
+
+async def handle_usage_summary_command():
+    """Выводит отчёт по использованным токенам в диалоге."""
+    usage_history = cl.user_session.get("usage_history", [])
+    if not usage_history:
+        await cl.Message(content="ℹ️ Пока нет данных по токенам — ещё не было запросов.").send()
+        return
+
+    logger.info("Command /summary: items=%d", len(usage_history))
+
+    report = format_usage_summary(usage_history)
+    await cl.Message(content=report).send()
 
 
 @cl.on_chat_start
 async def on_chat_start():
-    # Простой список для истории сообщений
     cl.user_session.set("history", [])
+    cl.user_session.set("usage_history", [])
+    logger.info("Chat started: history initialized")
 
     try:
         client = OpenRouterClient()
@@ -292,71 +148,33 @@ async def on_chat_start():
 
     cl.user_session.set("client", client)
 
-    # Устанавливаем system prompt по умолчанию
-    cl.user_session.set("system_prompt_key", "strict_teacher")
-
-    # Настраиваем интерфейс выбора system prompt
-    await cl.ChatSettings(
-        [
-            cl.input_widget.Select(
-                id="SystemPrompt",
-                label="System Prompt (роль агента)",
-                values=["strict_teacher", "friendly_mentor", "code_reviewer"],
-                initial_value="strict_teacher",
-            ),
-        ]
-    ).send()
-
     model_name = os.getenv("OPENROUTER_MODEL", "tngtech/deepseek-r1t2-chimera:free")
     await cl.Message(
         content=(
-            "🎄 AI Advent Challenge — Задания 5, 6, 7, 8\n\n"
-            "**Доступные команды:**\n\n"
-            "1. `/experiment <промпт>` — эксперимент с температурой\n"
-            "   Пример: `/experiment Объясни рекурсию`\n\n"
-            "2. `/compare <промпт>` — сравнение 4 моделей\n"
-            "   Пример: `/compare Что такое ООП в 3 предложениях`\n\n"
-            "3. `/tokens` — эксперимент с количеством токенов\n"
-            "   Показывает, как меняется поведение модели на коротком, длинном и очень длинном запросе\n\n"
-            "4. Обычный диалог с выбором роли агента (⚙️)\n\n"
+            "🤖 Чат ассистента. Доступные команды:\n\n"
+            "• `/compress` — сжимает текущую историю в краткую сводку\n"
+            "• `/summary` — выводит статистику по токенам за диалог\n\n"
+            "Остальное — обычный диалог без system prompt "
+            f"(можно задать через переменную `DEFAULT_SYSTEM_PROMPT`).\n\n"
             f"_Модель: {model_name}_"
         )
     ).send()
 
 
-@cl.on_settings_update
-async def on_settings_update(settings):
-    """Вызывается при изменении настроек пользователем."""
-    system_prompt_key = settings["SystemPrompt"]
-    cl.user_session.set("system_prompt_key", system_prompt_key)
-
-    prompt_names = {
-        "strict_teacher": "Строгий преподаватель",
-        "friendly_mentor": "Дружелюбный наставник",
-        "code_reviewer": "Код-ревьюер",
-    }
-
-    await cl.Message(
-        content=f"✅ System prompt изменён на: **{prompt_names.get(system_prompt_key, system_prompt_key)}**\n\n"
-                f"История диалога сохранена. Продолжайте общение!"
-    ).send()
-
-
 @cl.on_message
 async def on_message(message: cl.Message):
-    # Проверка на команду /compare
-    if message.content.strip().startswith("/compare"):
-        await handle_compare_command(message)
+    logger.info(
+        "Incoming message len=%d startswith=%s",
+        len(message.content),
+        message.content[:20].replace("\n", " "),
+    )
+
+    if message.content.strip().startswith("/compress"):
+        await handle_compress_command(message)
         return
 
-    # Проверка на команду /experiment
-    if message.content.strip().startswith("/experiment"):
-        await handle_experiment_command(message)
-        return
-
-    # Проверка на команду /tokens
-    if message.content.strip().startswith("/tokens"):
-        await handle_tokens_command(message)
+    if message.content.strip().startswith("/summary"):
+        await handle_usage_summary_command()
         return
 
     client = cl.user_session.get("client")
@@ -366,45 +184,54 @@ async def on_message(message: cl.Message):
         ).send()
         return
 
-    # Получаем историю и текущий system prompt
     history = cl.user_session.get("history", [])
-    system_prompt_key = cl.user_session.get("system_prompt_key", "strict_teacher")
-    system_prompt = SYSTEM_PROMPTS.get(system_prompt_key, SYSTEM_PROMPTS["strict_teacher"])
+    system_prompt = DEFAULT_SYSTEM_PROMPT
+    logger.info(
+        "Normal chat message: history_len=%d system_prompt=%s",
+        len(history),
+        "custom" if system_prompt else "none",
+    )
+    history_len_before = len(history)
+    system_len = len(system_prompt)
+    user_len = len(message.content)
 
     try:
-        # Формируем сообщения для API с актуальным system prompt
         messages = build_messages(message.content, history, system_prompt)
+        result = await client.chat_completion(messages)
+        usage = result.get("usage", {})
+        assistant_content = result["choices"][0]["message"]["content"]
+        assistant_len = len(assistant_content)
 
-        # Получаем JSON-ответ от модели
-        data = await client.get_json_completion(messages)
+        await cl.Message(content=assistant_content).send()
 
-        # Проверяем, завершён ли сбор требований
-        is_complete = data.get("is_complete", False)
-        message_text = data.get("message") or ""
-        final_document = data.get("final_document")
+        history.append({"role": "user", "content": message.content})
+        history.append({"role": "assistant", "content": assistant_content})
+        cl.user_session.set("history", history)
 
-        if is_complete and final_document:
-            # Модель завершила сбор данных — показываем финальный результат
-            formatted_response = (
-                f"✅ **Задача завершена!**\n\n"
-                f"{final_document}"
-            )
-        else:
-            # Продолжаем диалог — показываем только вопрос
-            formatted_response = message_text or "Продолжаем..."
-
-        # Отправляем ответ только если есть что отправить
-        if formatted_response:
-            await cl.Message(content=formatted_response).send()
-
-        # Сохраняем сообщения в историю (только если message_text валидный)
-        if message_text:
-            history.append({"role": "user", "content": message.content})
-            history.append({"role": "assistant", "content": message_text})
-            cl.user_session.set("history", history)
+        usage_history = cl.user_session.get("usage_history", [])
+        usage_history.append(
+            {
+                "user_message": message.content,
+                "assistant_message": assistant_content,
+                "prompt_tokens": usage.get("prompt_tokens", 0) if usage else 0,
+                "completion_tokens": usage.get("completion_tokens", 0) if usage else 0,
+                "total_tokens": usage.get("total_tokens", 0) if usage else 0,
+                "history_messages": history_len_before,
+                "user_length": user_len,
+                "assistant_length": assistant_len,
+                "system_length": system_len,
+            }
+        )
+        cl.user_session.set("usage_history", usage_history)
+        logger.info(
+            "Message processed: prompt=%s completion=%s total=%s",
+            usage.get("prompt_tokens", 0) if usage else 0,
+            usage.get("completion_tokens", 0) if usage else 0,
+            usage.get("total_tokens", 0) if usage else 0,
+        )
 
     except Exception as e:
-        # Обработка ошибок парсинга JSON или API
+        logger.exception("Error handling message")
         await cl.Message(
             content=f"❌ Ошибка обработки ответа: {e}\n\nПопробуйте переформулировать запрос."
         ).send()
