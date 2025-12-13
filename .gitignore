@@ -55,4 +55,6 @@ htmlcov/
 # mypy
 .mypy_cache/
 
+.chainlit
+
 tmp

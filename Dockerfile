@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -12,4 +12,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["chainlit", "run", "app/chainlit_app.py", "--host", "0.0.0.0", "--port", "8000", "--headless"]
+CMD ["chainlit", "run", "app/chat/chainlit_app.py", "--host", "0.0.0.0", "--port", "8000", "--headless"]
