@@ -5,6 +5,7 @@ from typing import Optional
 import chainlit as cl
 from chainlit.types import ThreadDict
 
+from app.chat.mcp_client import MCPClient
 from app.chat.openrouter_client import OpenRouterClient, build_messages
 from app.db.database import get_data_layer, init_db
 
@@ -15,6 +16,8 @@ try:
     asyncio.run(init_db())
 except Exception as e:
     logger.error(f"Ошибка инициализации БД: {e}")
+
+CONTEXT7_TRIGGER = "/context7"
 
 
 @cl.data_layer
@@ -34,6 +37,7 @@ def auth_callback(username: str, password: str) -> Optional[cl.User]:
 @cl.on_chat_start
 async def on_chat_start():
     """Инициализация нового чата."""
+    await cl.Message(content=f"Общение или узнать тулзы у mcp {CONTEXT7_TRIGGER}").send()
     client = OpenRouterClient()
     cl.user_session.set("client", client)
 
@@ -62,23 +66,68 @@ async def on_chat_resume(thread: ThreadDict):
     logger.info(f"Чат возобновлен, восстановлено {len(history)} сообщений")
 
 
+
 @cl.on_message
 async def on_message(message: cl.Message):
-    """Обработка входящего сообщения пользователя."""
-    client = cl.user_session.get("client")
-    history = cl.user_session.get("history")
 
-    messages = build_messages(
-        user_input=message.content,
-        history=history,
-        system_prompt="Ты полезный AI ассистент."
-    )
+    if CONTEXT7_TRIGGER in message.content:
+        tools_info = await get_tools_info()
+        await cl.Message(content=tools_info).send()
+    else:
+        """Обработка входящего сообщения пользователя."""
+        client = cl.user_session.get("client")
+        history = cl.user_session.get("history")
 
-    response_data = await client.chat_completion(messages=messages)
-    assistant_message = response_data["choices"][0]["message"]["content"]
+        messages = build_messages(
+            user_input=message.content,
+            history=history,
+            system_prompt="Ты полезный AI ассистент."
+        )
 
-    await cl.Message(content=assistant_message).send()
+        response_data = await client.chat_completion(messages=messages)
+        assistant_message = response_data["choices"][0]["message"]["content"]
 
-    history.append({"role": "user", "content": message.content})
-    history.append({"role": "assistant", "content": assistant_message})
-    cl.user_session.set("history", history)
+        await cl.Message(content=assistant_message).send()
+
+        history.append({"role": "user", "content": message.content})
+        history.append({"role": "assistant", "content": assistant_message})
+        cl.user_session.set("history", history)
+
+
+async def get_tools_info() -> str:
+    api_key = "ctx7sk-70ea9a0d-53d5-4055-94b5-29235d60cd08"
+    client = MCPClient("https://mcp.context7.com/mcp", api_key)
+
+    output = []
+
+    try:
+        # Получаем список инструментов
+        output.append("=== Получаем список инструментов ===\n")
+        tools = await client.list_tools()
+
+        output.append(f"Доступные инструменты ({len(tools)}):")
+
+        for tool in tools:
+            output.append(f"\n  📌 {tool['name']}")
+            output.append(f"     Заголовок: {tool.get('title', '')}")
+            output.append(f"     Описание: {tool.get('description', '')[:200]}...")
+
+            if 'inputSchema' in tool:
+                schema = tool['inputSchema']
+                props = schema.get('properties', {})
+                required = schema.get('required', [])
+
+                output.append(f"     Параметры:")
+                for prop_name, prop_schema in props.items():
+                    req_marker = "✓" if prop_name in required else "○"
+                    output.append(f"       {req_marker} {prop_name}: {prop_schema.get('description', '')[:100]}")
+
+    except Exception as e:
+        output.append(f"Ошибка: {e}")
+        import traceback
+        output.append(traceback.format_exc())
+
+    finally:
+        await client.close()
+
+    return "\n".join(output)
