@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import os
 from typing import Optional
 
 import chainlit as cl
@@ -18,6 +19,11 @@ except Exception as e:
     logger.error(f"Ошибка инициализации БД: {e}")
 
 CONTEXT7_TRIGGER = "/context7"
+CONTEXT7_MCP_ENDPOINT = os.getenv("CONTEXT7_MCP_ENDPOINT", "https://mcp.context7.com/mcp")
+CONTEXT7_API_KEY = os.getenv(
+    "CONTEXT7_API_KEY",
+    "ctx7sk-70ea9a0d-53d5-4055-94b5-29235d60cd08",
+)
 
 
 @cl.data_layer
@@ -37,7 +43,7 @@ def auth_callback(username: str, password: str) -> Optional[cl.User]:
 @cl.on_chat_start
 async def on_chat_start():
     """Инициализация нового чата."""
-    await cl.Message(content=f"Общение или узнать тулзы у mcp {CONTEXT7_TRIGGER}").send()
+    await cl.Message(content=f"Общение или узнать тулзы у mcp1 {CONTEXT7_TRIGGER}").send()
     client = OpenRouterClient()
     cl.user_session.set("client", client)
 
@@ -95,25 +101,33 @@ async def on_message(message: cl.Message):
 
 
 async def get_tools_info() -> str:
-    api_key = "ctx7sk-70ea9a0d-53d5-4055-94b5-29235d60cd08"
-    client = MCPClient("https://mcp.context7.com/mcp", api_key)
+    client = MCPClient(endpoint=CONTEXT7_MCP_ENDPOINT, api_key=CONTEXT7_API_KEY)
 
     output = []
 
     try:
-        # Получаем список инструментов
         output.append("=== Получаем список инструментов ===\n")
-        tools = await client.list_tools()
+        await client.ensure_initialized()
 
-        output.append(f"Доступные инструменты ({len(tools)}):")
+        all_tools = []
+        cursor = None
+        while True:
+            page = await client.list_tools(cursor=cursor)
+            tools = page.get("tools") or []
+            all_tools.extend(tools)
+            cursor = page.get("nextCursor")
+            if not cursor:
+                break
 
-        for tool in tools:
-            output.append(f"\n  📌 {tool['name']}")
+        output.append(f"Доступные инструменты ({len(all_tools)}):")
+
+        for tool in all_tools:
+            output.append(f"\n  📌 {tool.get('name', '(no name)')}")
             output.append(f"     Заголовок: {tool.get('title', '')}")
             output.append(f"     Описание: {tool.get('description', '')[:200]}...")
 
-            if 'inputSchema' in tool:
-                schema = tool['inputSchema']
+            schema = tool.get("inputSchema")
+            if isinstance(schema, dict):
                 props = schema.get('properties', {})
                 required = schema.get('required', [])
 
@@ -126,8 +140,5 @@ async def get_tools_info() -> str:
         output.append(f"Ошибка: {e}")
         import traceback
         output.append(traceback.format_exc())
-
-    finally:
-        await client.close()
 
     return "\n".join(output)

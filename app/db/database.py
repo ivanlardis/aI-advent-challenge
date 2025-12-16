@@ -1,5 +1,7 @@
 import os
 import logging
+from urllib.parse import urlparse, urlunparse
+
 import asyncpg
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
@@ -94,13 +96,13 @@ async def init_db() -> None:
     """Инициализация таблиц Chainlit в БД."""
     database_url = os.getenv("DATABASE_URL")
 
-    if database_url.startswith("postgresql://"):
-        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if not database_url:
+        raise RuntimeError("DATABASE_URL env var is not set")
 
-    # Извлекаем параметры подключения из URL
-    database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+    asyncpg_url = _normalize_for_asyncpg(database_url)
+    await _ensure_database_exists(asyncpg_url)
 
-    conn = await asyncpg.connect(database_url)
+    conn = await asyncpg.connect(asyncpg_url)
     try:
         await conn.execute(CHAINLIT_TABLES_SQL)
         logger.info("Таблицы Chainlit созданы/проверены")
@@ -117,3 +119,38 @@ def get_data_layer() -> SQLAlchemyDataLayer:
         database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
     return SQLAlchemyDataLayer(conninfo=database_url)
+
+
+def _normalize_for_asyncpg(url: str) -> str:
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return url
+
+
+async def _ensure_database_exists(dsn: str) -> None:
+    parsed = urlparse(dsn)
+    target_db = parsed.path.lstrip("/") or "postgres"
+    if target_db == "postgres":
+        return
+
+    admin_parsed = parsed._replace(path="/postgres")
+    admin_dsn = urlunparse(admin_parsed)
+
+    try:
+        admin_conn = await asyncpg.connect(admin_dsn)
+    except asyncpg.InvalidCatalogNameError:
+        admin_parsed = parsed._replace(path="/template1")
+        admin_dsn = urlunparse(admin_parsed)
+        admin_conn = await asyncpg.connect(admin_dsn)
+
+    try:
+        exists = await admin_conn.fetchval(
+            "SELECT 1 FROM pg_database WHERE datname=$1",
+            target_db,
+        )
+        if not exists:
+            safe_name = target_db.replace('"', '""')
+            await admin_conn.execute(f'CREATE DATABASE "{safe_name}"')
+            logger.info("Создана база данных %s", target_db)
+    finally:
+        await admin_conn.close()
