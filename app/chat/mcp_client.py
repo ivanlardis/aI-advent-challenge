@@ -105,14 +105,19 @@ class MCPClient:
                     self._session_id = resp.headers.get("Mcp-Session-Id") or resp.headers.get("mcp-session-id")
 
                 if ctype.startswith("application/json"):
-                    return await resp.json()
+                    content = await resp.aread()
+                    if not content or content.strip() == b'':
+                        return None
+                    return json.loads(content)
 
                 if ctype.startswith("text/event-stream"):
                     # SSE: читаем data: ... пока не получим JSON-RPC response(ы)
                     return await self._read_sse_as_json(resp)
 
-                # Неожиданный тип
+                # Неожиданный тип - может быть пустой ответ для notification
                 text = await resp.aread()
+                if not text or text.strip() == b'':
+                    return None
                 raise MCPError(f"Unexpected Content-Type from MCP server: {ctype}. Body={text[:200]!r}")
 
     async def _read_sse_as_json(self, resp: httpx.Response) -> Any:

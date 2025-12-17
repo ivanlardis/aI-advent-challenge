@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 EXPOSE 1221
-CMD ["uvicorn", "weather_server:app", "--host", "0.0.0.0", "--port", "1221"]
+CMD ["uvicorn", "reminder_server:app", "--host", "0.0.0.0", "--port", "1221"]

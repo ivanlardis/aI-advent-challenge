@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lardis}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lardis} -d ${POSTGRES_DB:-lardis_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,14 +26,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      weather-mcp-server:
+      reminder-mcp-server:
         condition: service_healthy
     environment:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-tngtech/deepseek-r1t2-chimera:free}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
-      MCP_ENDPOINT: http://weather-mcp-server:1221/mcp
-      MCP_HOST_HEADER: weather-mcp-server:1221
+      MCP_ENDPOINT: ${MCP_ENDPOINT:-http://reminder-mcp-server:1221/mcp}
+      MCP_HOST_HEADER: ${MCP_HOST_HEADER:-localhost:1221}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER}
@@ -53,19 +53,28 @@ services:
     env_file:
       - .env
 
-  weather-mcp-server:
+  reminder-mcp-server:
     build:
       context: ./mcp_server
       dockerfile: Dockerfile
-    image: lardis-weather-mcp-server:latest
-    container_name: weather-mcp-server
+    image: lardis-reminder-mcp-server:latest
+    container_name: reminder-mcp-server
     restart: unless-stopped
     ports:
       - "1221:1221"
     environment:
       PYTHONUNBUFFERED: "1"
       MCP_PORT: "1221"
-    command: ["uvicorn", "weather_server:app", "--host", "0.0.0.0", "--port", "1221"]
+      MAILTRAP_API_TOKEN: ${MAILTRAP_API_TOKEN}
+      MAILTRAP_SENDER_EMAIL: ${MAILTRAP_SENDER_EMAIL}
+      MAILTRAP_SENDER_NAME: ${MAILTRAP_SENDER_NAME:-Reminders Bot}
+      SUMMARY_EMAIL_TO: ${SUMMARY_EMAIL_TO}
+      SUMMARY_EMAIL_AUTO: ${SUMMARY_EMAIL_AUTO:-false}
+      SUMMARY_EMAIL_TIME: ${SUMMARY_EMAIL_TIME:-09:00}
+      SUMMARY_EMAIL_CHECK_INTERVAL: ${SUMMARY_EMAIL_CHECK_INTERVAL:-60}
+    volumes:
+      - reminder_data:/data
+    command: ["uvicorn", "reminder_server:app", "--host", "0.0.0.0", "--port", "1221"]
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request, sys; resp=urllib.request.urlopen('http://localhost:1221/health', timeout=5); sys.exit(0 if resp.status == 200 else 1)\""]
       interval: 10s
@@ -74,4 +83,6 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  reminder_data:
     driver: local

@@ -107,6 +107,7 @@ class OpenRouterClient:
         working_messages: List[Dict[str, Any]] = list(messages)
 
         tools: Optional[List[Dict[str, Any]]] = None
+        mcp_calls: List[Dict[str, Any]] = []
         if use_mcp_tools:
             try:
                 tools = await self._fetch_mcp_tools_as_openai_tools(force_refresh=mcp_force_refresh_tools)
@@ -137,6 +138,7 @@ class OpenRouterClient:
             tool_calls = msg.get("tool_calls") or []
             # Если нет tool_calls — это финал
             if not tool_calls:
+                data["_mcp_calls"] = mcp_calls
                 return data
 
             # Добавляем assistant message с tool_calls в историю как есть
@@ -161,11 +163,15 @@ class OpenRouterClient:
                     # если модель вернула невалидный JSON, прокинем как строку
                     args = {"_raw": raw_args}
 
+                call_record: Dict[str, Any] = {"name": name, "arguments": args}
+
                 try:
                     result = await self.mcp.call_tool(name=name, arguments=args)
+                    call_record["result"] = result
                     content = json.dumps(result, ensure_ascii=False)
                 except Exception as e:
                     # важно: инструмент может фейлиться, но LLM должна увидеть ошибку
+                    call_record["error"] = str(e)
                     content = json.dumps({"error": str(e), "tool": name, "arguments": args}, ensure_ascii=False)
 
                 working_messages.append(
@@ -175,9 +181,12 @@ class OpenRouterClient:
                         "content": content,
                     }
                 )
+                mcp_calls.append(call_record)
 
         # Если дошли сюда — уткнулись в лимит раундов, возвращаем последний ответ (с tool_calls)
-        return last_data or {"choices": []}
+        last_data = last_data or {"choices": []}
+        last_data["_mcp_calls"] = mcp_calls
+        return last_data
 
 
 def build_messages(
