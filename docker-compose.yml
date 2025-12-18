@@ -28,12 +28,16 @@ services:
         condition: service_healthy
       reminder-mcp-server:
         condition: service_healthy
+      email-mcp-server:
+        condition: service_healthy
     environment:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-tngtech/deepseek-r1t2-chimera:free}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
-      MCP_ENDPOINT: ${MCP_ENDPOINT:-http://reminder-mcp-server:1221/mcp}
-      MCP_HOST_HEADER: ${MCP_HOST_HEADER:-localhost:1221}
+      MCP_REMINDER_ENDPOINT: ${MCP_REMINDER_ENDPOINT:-http://reminder-mcp-server:1221/mcp}
+      MCP_REMINDER_HOST: ${MCP_REMINDER_HOST:-localhost:1221}
+      MCP_EMAIL_ENDPOINT: ${MCP_EMAIL_ENDPOINT:-http://email-mcp-server:1222/mcp}
+      MCP_EMAIL_HOST: ${MCP_EMAIL_HOST:-localhost:1222}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER}
@@ -65,18 +69,33 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
       MCP_PORT: "1221"
-      MAILTRAP_API_TOKEN: ${MAILTRAP_API_TOKEN}
-      MAILTRAP_SENDER_EMAIL: ${MAILTRAP_SENDER_EMAIL}
-      MAILTRAP_SENDER_NAME: ${MAILTRAP_SENDER_NAME:-Reminders Bot}
-      SUMMARY_EMAIL_TO: ${SUMMARY_EMAIL_TO}
-      SUMMARY_EMAIL_AUTO: ${SUMMARY_EMAIL_AUTO:-false}
-      SUMMARY_EMAIL_TIME: ${SUMMARY_EMAIL_TIME:-09:00}
-      SUMMARY_EMAIL_CHECK_INTERVAL: ${SUMMARY_EMAIL_CHECK_INTERVAL:-60}
     volumes:
       - reminder_data:/data
     command: ["uvicorn", "reminder_server:app", "--host", "0.0.0.0", "--port", "1221"]
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request, sys; resp=urllib.request.urlopen('http://localhost:1221/health', timeout=5); sys.exit(0 if resp.status == 200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  email-mcp-server:
+    build:
+      context: ./mcp_server
+      dockerfile: Dockerfile.email
+    image: lardis-email-mcp-server:latest
+    container_name: email-mcp-server
+    restart: unless-stopped
+    ports:
+      - "1222:1222"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      MCP_PORT: "1222"
+      MAILTRAP_API_TOKEN: ${MAILTRAP_API_TOKEN}
+      MAILTRAP_SENDER_EMAIL: ${MAILTRAP_SENDER_EMAIL}
+      MAILTRAP_SENDER_NAME: ${MAILTRAP_SENDER_NAME:-Lardis Bot}
+    command: ["uvicorn", "email_server:app", "--host", "0.0.0.0", "--port", "1222"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request, sys; resp=urllib.request.urlopen('http://localhost:1222/health', timeout=5); sys.exit(0 if resp.status == 200 else 1)\""]
       interval: 10s
       timeout: 5s
       retries: 5

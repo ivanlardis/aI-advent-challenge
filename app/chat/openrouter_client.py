@@ -22,46 +22,65 @@ class OpenRouterClient:
 
         self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 
-        # MCP включаем всегда (endpoint по умолчанию localhost), но используем только если явно попросили use_mcp=True
-        self.mcp = MCPClient()
+        # Multi-MCP: несколько клиентов для разных серверов
+        self.mcp_clients: Dict[str, MCPClient] = {
+            "reminder": MCPClient(
+                endpoint=os.getenv("MCP_REMINDER_ENDPOINT", "http://reminder-mcp-server:1221/mcp"),
+                host_header=os.getenv("MCP_REMINDER_HOST", "localhost:1221")
+            ),
+            "email": MCPClient(
+                endpoint=os.getenv("MCP_EMAIL_ENDPOINT", "http://email-mcp-server:1222/mcp"),
+                host_header=os.getenv("MCP_EMAIL_HOST", "localhost:1222")
+            ),
+        }
+        self._tool_to_client: Dict[str, str] = {}
         self._mcp_tools_cache: Optional[List[Dict[str, Any]]] = None
 
     async def _fetch_mcp_tools_as_openai_tools(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         if self._mcp_tools_cache is not None and not force_refresh:
             return self._mcp_tools_cache
 
-        await self.mcp.ensure_initialized()
-
-        # Собираем все страницы tools/list
-        tools: List[Dict[str, Any]] = []
-        cursor: Optional[str] = None
-        while True:
-            page = await self.mcp.list_tools(cursor=cursor)
-            page_tools = page.get("tools", []) or []
-            tools.extend(page_tools)
-            cursor = page.get("nextCursor")
-            if not cursor:
-                break
-
-        # MCP tool -> OpenAI tool schema
         openai_tools: List[Dict[str, Any]] = []
-        for t in tools:
-            name = t.get("name")
-            if not name:
+        self._tool_to_client.clear()
+
+        # Агрегация tools из всех MCP серверов
+        for client_key, mcp_client in self.mcp_clients.items():
+            try:
+                await mcp_client.ensure_initialized()
+
+                # Собираем все страницы tools/list для текущего клиента
+                cursor: Optional[str] = None
+                while True:
+                    page = await mcp_client.list_tools(cursor=cursor)
+                    page_tools = page.get("tools", []) or []
+
+                    for t in page_tools:
+                        name = t.get("name")
+                        if not name:
+                            continue
+
+                        # Регистрируем маршрут tool -> client
+                        self._tool_to_client[name] = client_key
+
+                        openai_tools.append({
+                            "type": "function",
+                            "function": {
+                                "name": name,
+                                "description": t.get("description") or "",
+                                "parameters": t.get("inputSchema") or {"type": "object", "properties": {}},
+                            },
+                        })
+
+                    cursor = page.get("nextCursor")
+                    if not cursor:
+                        break
+
+            except Exception as exc:
+                logger.warning(f"MCP client '{client_key}' unavailable: {exc}")
                 continue
-            openai_tools.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": name,
-                        "description": t.get("description") or "",
-                        "parameters": t.get("inputSchema") or {"type": "object", "properties": {}},
-                    },
-                }
-            )
 
         self._mcp_tools_cache = openai_tools
-        logger.info("MCP tools loaded: %d", len(openai_tools))
+        logger.info("MCP tools loaded: %d from %d servers", len(openai_tools), len(self.mcp_clients))
         return openai_tools
 
     async def _or_post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -166,7 +185,14 @@ class OpenRouterClient:
                 call_record: Dict[str, Any] = {"name": name, "arguments": args}
 
                 try:
-                    result = await self.mcp.call_tool(name=name, arguments=args)
+                    # Маршрутизация к правильному MCP серверу
+                    client_key = self._tool_to_client.get(name)
+                    if not client_key:
+                        raise ValueError(f"Unknown tool: {name}")
+
+                    mcp_client = self.mcp_clients[client_key]
+                    logger.info(f"Routing tool '{name}' to MCP server '{client_key}'")
+                    result = await mcp_client.call_tool(name=name, arguments=args)
                     call_record["result"] = result
                     content = json.dumps(result, ensure_ascii=False)
                 except Exception as e:

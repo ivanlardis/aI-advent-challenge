@@ -74,10 +74,25 @@ async def on_message(message: cl.Message):
     client = cl.user_session.get("client")
     history = cl.user_session.get("history")
 
+    system_prompt = """Ты полезный AI ассистент с доступом к инструментам управления напоминаниями и отправки email.
+
+Когда пользователь просит суммировать напоминания и отправить на email:
+1. Вызови инструмент 'list_reminders' чтобы получить все напоминания
+2. Проанализируй текст каждого напоминания и определи важность:
+   - ВЫСОКИЙ приоритет: содержит слова "срочно", "важно", "deadline", "критично", "ASAP"
+   - СРЕДНИЙ приоритет: обычные задачи и события
+   - НИЗКИЙ приоритет: информационные или отложенные напоминания
+3. Сформируй JSON-массив напоминаний
+4. Вызови инструмент 'send_reminders_summary' с:
+   - reminders_json: полный список в формате JSON
+   - analysis_notes: краткое резюме анализа приоритизации
+
+Примечание: email адрес получателя устанавливается автоматически из настроек, не запрашивай его у пользователя."""
+
     messages = build_messages(
         user_input=message.content,
         history=history,
-        system_prompt="Ты полезный AI ассистент."
+        system_prompt=system_prompt
     )
 
     response_data = await client.chat_completion(messages=messages)
