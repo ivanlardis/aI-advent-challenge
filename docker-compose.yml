@@ -30,6 +30,8 @@ services:
         condition: service_healthy
       email-mcp-server:
         condition: service_healthy
+      docker-mcp-server:
+        condition: service_healthy
     environment:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-tngtech/deepseek-r1t2-chimera:free}
@@ -38,6 +40,8 @@ services:
       MCP_REMINDER_HOST: ${MCP_REMINDER_HOST:-localhost:1221}
       MCP_EMAIL_ENDPOINT: ${MCP_EMAIL_ENDPOINT:-http://email-mcp-server:1222/mcp}
       MCP_EMAIL_HOST: ${MCP_EMAIL_HOST:-localhost:1222}
+      MCP_DOCKER_ENDPOINT: ${MCP_DOCKER_ENDPOINT:-http://docker-mcp-server:1223/mcp}
+      MCP_DOCKER_HOST: ${MCP_DOCKER_HOST:-localhost:1223}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER}
@@ -96,6 +100,27 @@ services:
     command: ["uvicorn", "email_server:app", "--host", "0.0.0.0", "--port", "1222"]
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request, sys; resp=urllib.request.urlopen('http://localhost:1222/health', timeout=5); sys.exit(0 if resp.status == 200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  docker-mcp-server:
+    build:
+      context: ./mcp_server
+      dockerfile: Dockerfile.docker
+    image: lardis-docker-mcp-server:latest
+    container_name: docker-mcp-server
+    restart: unless-stopped
+    ports:
+      - "1223:1223"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      MCP_PORT: "1223"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: ["uvicorn", "docker_server:app", "--host", "0.0.0.0", "--port", "1223"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request, sys; resp=urllib.request.urlopen('http://localhost:1223/health', timeout=5); sys.exit(0 if resp.status == 200 else 1)\""]
       interval: 10s
       timeout: 5s
       retries: 5
