@@ -32,6 +32,10 @@ class OpenRouterClient:
                 endpoint=os.getenv("MCP_EMAIL_ENDPOINT", "http://email-mcp-server:1222/mcp"),
                 host_header=os.getenv("MCP_EMAIL_HOST", "localhost:1222")
             ),
+            "docker": MCPClient(
+                endpoint=os.getenv("MCP_DOCKER_ENDPOINT", "http://docker-mcp-server:1223/mcp"),
+                host_header=os.getenv("MCP_DOCKER_HOST", "localhost:1223")
+            ),
         }
         self._tool_to_client: Dict[str, str] = {}
         self._mcp_tools_cache: Optional[List[Dict[str, Any]]] = None
