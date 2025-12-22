@@ -1,15 +1,19 @@
 import asyncio
 import json
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import chainlit as cl
 from chainlit.types import ThreadDict
 
 from app.chat.openrouter_client import OpenRouterClient, build_messages
 from app.db.database import get_data_layer, init_db
+from app.rag.rag_service import CityRAG
 
 logger = logging.getLogger(__name__)
+
+# Глобальная переменная для RAG индекса
+RAG_INDEX: Optional[CityRAG] = None
 
 # Инициализируем таблицы при импорте модуля
 try:
@@ -31,10 +35,62 @@ def auth_callback(username: str, password: str) -> Optional[cl.User]:
     return None
 
 
+def should_use_rag(user_input: str) -> bool:
+    """Определяет необходимость RAG-поиска по ключевым словам."""
+    keywords = [
+        "город", "города", "городе", "городов", "городах",
+        "федеральный округ", "регион", "область",
+        "расположен", "находится", "где",
+        # Примеры названий городов
+        "москва", "санкт-петербург", "тула", "брянск", "казань",
+        "новосибирск", "екатеринбург", "иркутск", "челябинск"
+    ]
+    user_input_lower = user_input.lower()
+    return any(keyword in user_input_lower for keyword in keywords)
+
+
+def format_rag_context(results: List[Dict[str, Any]]) -> str:
+    """Форматирует результаты RAG-поиска для промпта."""
+    if not results:
+        return ""
+
+    parts = ["Найденная информация о городах из базы знаний:\n"]
+    for i, result in enumerate(results, 1):
+        city = result.get("city", "Неизвестно")
+        text = result.get("text", "")
+        score = result.get("score", 0.0)
+        parts.append(f"{i}. {city}: {text} (релевантность: {score:.2f})")
+
+    return "\n".join(parts)
+
+
 @cl.on_chat_start
 async def on_chat_start():
     """Инициализация нового чата."""
-    await cl.Message(content="Привет! Я AI ассистент с доступом к инструментам напоминаний.").send()
+    global RAG_INDEX
+
+    # Инициализация RAG индекса (один раз для всего приложения)
+    if RAG_INDEX is None:
+        await cl.Message(content="🔄 Загружаю базу знаний городов России...").send()
+        try:
+            RAG_INDEX = CityRAG(
+                data_file="rag_example_cities_ru.txt",
+                index_dir="data/faiss_index",
+                model_name="paraphrase-multilingual-MiniLM-L12-v2",  # Лёгкая модель 420 МБ
+                deduplicate=True
+            )
+            await RAG_INDEX.initialize()
+            stats = RAG_INDEX.get_stats()
+            await cl.Message(
+                content=f"✅ База знаний готова! Загружено {stats.get('total_documents', 0)} документов."
+            ).send()
+        except Exception as e:
+            logger.error(f"Ошибка инициализации RAG: {e}")
+            await cl.Message(
+                content=f"⚠️ Не удалось загрузить базу знаний городов: {e}"
+            ).send()
+
+    await cl.Message(content="Привет! Я AI ассистент с доступом к инструментам напоминаний и базе знаний о городах России.").send()
     client = OpenRouterClient()
     cl.user_session.set("client", client)
 
@@ -74,7 +130,43 @@ async def on_message(message: cl.Message):
     client = cl.user_session.get("client")
     history = cl.user_session.get("history")
 
-    system_prompt = """Ты полезный AI ассистент с доступом к инструментам управления напоминаниями и отправки email.
+    # RAG-поиск если нужно
+    rag_context = ""
+    if RAG_INDEX and should_use_rag(message.content):
+        try:
+            logger.info(f"Выполняю RAG-поиск для запроса: {message.content[:50]}...")
+            search_results = RAG_INDEX.search(message.content, k=3)
+
+            if search_results:
+                rag_context = format_rag_context(search_results)
+                logger.info(f"Найдено {len(search_results)} релевантных документов")
+
+                # Формируем сообщение с деталями найденных документов
+                details_lines = [f"**[RAG] Найдено {len(search_results)} релевантных документов:**\n"]
+                for i, result in enumerate(search_results, 1):
+                    city = result.get("city", "Неизвестно")
+                    text = result.get("text", "")
+                    score = result.get("score", 0.0)
+                    preview = text[:100] + "..." if len(text) > 100 else text
+                    details_lines.append(
+                        f"{i}. **{city}** (релевантность: {score:.2f})\n   _{preview}_"
+                    )
+
+                # Отправляем сообщение с результатами
+                msg_content = "\n\n".join(details_lines)
+                logger.info(f"[DEBUG] Отправляю RAG-сообщение в Chainlit, длина: {len(msg_content)}")
+                msg = cl.Message(content=msg_content)
+                await msg.send()
+                logger.info(f"[DEBUG] RAG-сообщение отправлено, ID: {msg.id}")
+        except Exception as e:
+            logger.error(f"Ошибка RAG-поиска: {e}", exc_info=True)
+            try:
+                await cl.Message(content=f"**[RAG]** ❌ Ошибка поиска: {e}").send()
+            except Exception as e2:
+                logger.error(f"Ошибка отправки сообщения об ошибке: {e2}", exc_info=True)
+
+    # Базовый промпт
+    base_prompt = """Ты полезный AI ассистент с доступом к инструментам управления напоминаниями и отправки email.
 
 Когда пользователь просит суммировать напоминания и отправить на email:
 1. Вызови инструмент 'list_reminders' чтобы получить все напоминания
@@ -88,6 +180,17 @@ async def on_message(message: cl.Message):
    - analysis_notes: краткое резюме анализа приоритизации
 
 Примечание: email адрес получателя устанавливается автоматически из настроек, не запрашивай его у пользователя."""
+
+    # Добавляем RAG-контекст если есть
+    if rag_context:
+        system_prompt = f"""{base_prompt}
+
+{rag_context}
+
+Используй найденную информацию для ответа на вопрос пользователя о городах.
+Если информация не найдена в базе, честно скажи об этом."""
+    else:
+        system_prompt = base_prompt
 
     messages = build_messages(
         user_input=message.content,

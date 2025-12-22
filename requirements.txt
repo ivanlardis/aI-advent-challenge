@@ -13,3 +13,7 @@ psycopg2-binary==2.9.10
 aiosqlite==0.20.0
 mailtrap
 python-dotenv
+# RAG dependencies
+sentence-transformers==3.3.1
+chromadb==0.5.20
+numpy==1.26.4
