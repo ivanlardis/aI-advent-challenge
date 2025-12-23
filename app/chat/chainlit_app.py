@@ -41,9 +41,10 @@ def should_use_rag(user_input: str) -> bool:
         "город", "города", "городе", "городов", "городах",
         "федеральный округ", "регион", "область",
         "расположен", "находится", "где",
-        # Примеры названий городов
-        "москва", "санкт-петербург", "тула", "брянск", "казань",
-        "новосибирск", "екатеринбург", "иркутск", "челябинск"
+        # Названия городов пользователя
+        "москва", "санкт-петербург", "волгоград", "самара",
+        "зеленогдар", "орск", "батино",
+        "тула", "брянск", "казань", "новосибирск", "екатеринбург"
     ]
     user_input_lower = user_input.lower()
     return any(keyword in user_input_lower for keyword in keywords)
@@ -90,7 +91,24 @@ async def on_chat_start():
                 content=f"⚠️ Не удалось загрузить базу знаний городов: {e}"
             ).send()
 
-    await cl.Message(content="Привет! Я AI ассистент с доступом к инструментам напоминаний и базе знаний о городах России.").send()
+    # Сохраняем начальное значение в сессии
+    cl.user_session.set("use_rag", True)
+
+    # Создаем приветственное сообщение с кнопками управления RAG
+    actions = [
+        cl.Action(name="enable_rag", value="enable", label="✅ Включить RAG"),
+        cl.Action(name="disable_rag", value="disable", label="❌ Выключить RAG"),
+    ]
+
+    await cl.Message(
+        content="Привет! Я AI ассистент с доступом к инструментам напоминаний и базе знаний о городах России.\n\n"
+                "**RAG сейчас: ✅ ВКЛЮЧЕН**\n\n"
+                "Используй кнопки ниже для управления RAG или напиши команду:\n"
+                "• `/rag on` - включить RAG\n"
+                "• `/rag off` - выключить RAG\n\n"
+                "Попробуй спросить о городах: Москва, Волгоград, Зеленогдар, Орск и других!",
+        actions=actions
+    ).send()
     client = OpenRouterClient()
     cl.user_session.set("client", client)
 
@@ -123,16 +141,39 @@ async def on_chat_resume(thread: ThreadDict):
     logger.info(f"Чат возобновлен, восстановлено {len(history)} сообщений")
 
 
+@cl.action_callback("enable_rag")
+async def on_enable_rag(action: cl.Action):
+    """Включить RAG."""
+    cl.user_session.set("use_rag", True)
+    await cl.Message(content="✅ **RAG ВКЛЮЧЕН**. Теперь буду использовать базу знаний о городах!").send()
+
+@cl.action_callback("disable_rag")
+async def on_disable_rag(action: cl.Action):
+    """Выключить RAG."""
+    cl.user_session.set("use_rag", False)
+    await cl.Message(content="❌ **RAG ВЫКЛЮЧЕН**. Буду отвечать без базы знаний!").send()
+
 
 @cl.on_message
 async def on_message(message: cl.Message):
     """Обработка входящего сообщения пользователя."""
+    # Обработка команд управления RAG
+    if message.content.strip().lower() == "/rag on":
+        cl.user_session.set("use_rag", True)
+        await cl.Message(content="✅ **RAG ВКЛЮЧЕН**. Теперь буду использовать базу знаний о городах!").send()
+        return
+    elif message.content.strip().lower() == "/rag off":
+        cl.user_session.set("use_rag", False)
+        await cl.Message(content="❌ **RAG ВЫКЛЮЧЕН**. Буду отвечать без базы знаний!").send()
+        return
+
     client = cl.user_session.get("client")
     history = cl.user_session.get("history")
 
     # RAG-поиск если нужно
     rag_context = ""
-    if RAG_INDEX and should_use_rag(message.content):
+    use_rag = cl.user_session.get("use_rag", True)
+    if RAG_INDEX and use_rag and should_use_rag(message.content):
         try:
             logger.info(f"Выполняю RAG-поиск для запроса: {message.content[:50]}...")
             search_results = RAG_INDEX.search(message.content, k=3)
