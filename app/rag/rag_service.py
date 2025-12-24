@@ -77,25 +77,73 @@ class CityRAG:
         self.index = FAISSIndex(dimension=self.embedding_model.get_dimension())
         self.index.add_documents(embeddings, documents)
 
-    def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+    def search(
+        self,
+        query: str,
+        k: int = 5,
+        min_score: Optional[float] = None,
+        apply_filter: bool = True
+    ) -> Dict[str, Any]:
         """
-        Поиск релевантных документов по запросу.
+        Поиск релевантных документов с опциональной фильтрацией по score.
 
         Args:
             query: Текст запроса
-            k: Количество результатов
+            k: Количество результатов (до фильтрации)
+            min_score: Минимальный порог релевантности (0.0-1.0)
+            apply_filter: Применять ли фильтрацию по порогу
 
         Returns:
-            Список найденных документов с метаданными и score
+            Словарь с метаданными фильтрации:
+            - all_results: все результаты до фильтрации
+            - filtered_results: результаты после фильтрации
+            - filtered_count: количество отфильтрованных документов
+            - filter_applied: был ли применен фильтр
+            - min_score_used: использованный порог
         """
         if self.index is None or self.embedding_model is None:
             raise RuntimeError("RAG не инициализирован. Вызовите initialize() сначала.")
 
-        logger.info(f"Поиск по запросу: {query[:50]}...")
-        query_embedding = self.embedding_model.encode_query(query)
-        results = self.index.search(query_embedding, k)
+        logger.info(
+            f"RAG Query: '{query[:50]}' | k={k} | "
+            f"min_score={min_score} | filter={apply_filter}"
+        )
 
-        return results
+        # Получаем результаты от индекса
+        query_embedding = self.embedding_model.encode_query(query)
+        all_results = self.index.search(query_embedding, k)
+
+        # Логируем все результаты
+        for i, result in enumerate(all_results, 1):
+            logger.info(
+                f"Result {i}: {result['city']} | "
+                f"score={result['score']:.3f} | "
+                f"text_len={len(result['text'])}"
+            )
+
+        # Применяем фильтрацию если нужно
+        filtered_results = all_results
+        if apply_filter and min_score is not None:
+            filtered_results = [r for r in all_results if r["score"] >= min_score]
+            rejected = [r for r in all_results if r["score"] < min_score]
+
+            logger.info(
+                f"Filtering: {len(all_results)} → {len(filtered_results)} results | "
+                f"rejected={len(rejected)}"
+            )
+
+            for r in rejected:
+                logger.debug(
+                    f"Rejected: {r['city']} (score={r['score']:.3f} < {min_score})"
+                )
+
+        return {
+            "all_results": all_results,
+            "filtered_results": filtered_results,
+            "filtered_count": len(all_results) - len(filtered_results),
+            "filter_applied": apply_filter and min_score is not None,
+            "min_score_used": min_score
+        }
 
     def get_stats(self) -> Dict[str, Any]:
         """Возвращает статистику RAG-системы."""

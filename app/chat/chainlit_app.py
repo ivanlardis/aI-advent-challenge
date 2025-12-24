@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Optional, List, Dict, Any
 
 import chainlit as cl
@@ -65,6 +66,62 @@ def format_rag_context(results: List[Dict[str, Any]]) -> str:
     return "\n".join(parts)
 
 
+async def display_rag_results(
+    all_results: List[Dict[str, Any]],
+    filtered_results: List[Dict[str, Any]],
+    filter_applied: bool,
+    min_score: float
+):
+    """
+    Визуализирует результаты RAG-поиска с информацией о фильтрации.
+
+    Показывает:
+    - Количество результатов до/после фильтрации
+    - Отфильтрованные документы с причиной отклонения
+    - Принятые документы с preview
+    """
+    lines = []
+
+    # Заголовок
+    if filter_applied:
+        lines.append(
+            f"**[RAG] Найдено {len(all_results)} документов, "
+            f"прошло фильтр: {len(filtered_results)} "
+            f"(порог: {min_score:.2f})**\n"
+        )
+    else:
+        lines.append(f"**[RAG] Найдено {len(all_results)} документов**\n")
+
+    # Отфильтрованные результаты
+    if filter_applied:
+        rejected = [r for r in all_results if r not in filtered_results]
+        if rejected:
+            lines.append("**❌ Отклонено (низкая релевантность):**")
+            for r in rejected:
+                city = r.get("city", "Неизвестно")
+                score = r.get("score", 0.0)
+                lines.append(f"- {city} (score: {score:.3f} < {min_score:.2f})")
+            lines.append("")
+
+    # Принятые результаты
+    if filtered_results:
+        lines.append("**✅ Принято:**")
+        for i, result in enumerate(filtered_results, 1):
+            city = result.get("city", "Неизвестно")
+            text = result.get("text", "")
+            score = result.get("score", 0.0)
+            preview = text[:100] + "..." if len(text) > 100 else text
+
+            lines.append(
+                f"{i}. **{city}** (релевантность: {score:.3f})\n"
+                f"   _{preview}_"
+            )
+
+    # Отправка сообщения
+    content = "\n".join(lines)
+    await cl.Message(content=content).send()
+
+
 @cl.on_chat_start
 async def on_chat_start():
     """Инициализация нового чата."""
@@ -94,19 +151,36 @@ async def on_chat_start():
     # Сохраняем начальное значение в сессии
     cl.user_session.set("use_rag", True)
 
+    # Инициализация настроек RAG фильтра
+    rag_filter_enabled = os.getenv("RAG_FILTER_ENABLED", "true").lower() == "true"
+    rag_min_score = float(os.getenv("RAG_MIN_SCORE", "0.7"))
+
+    cl.user_session.set("use_rag_filter", rag_filter_enabled)
+    cl.user_session.set("rag_min_score", rag_min_score)
+
     # Создаем приветственное сообщение с кнопками управления RAG
     actions = [
-        cl.Action(name="enable_rag", value="enable", label="✅ Включить RAG"),
-        cl.Action(name="disable_rag", value="disable", label="❌ Выключить RAG"),
+        cl.Action(name="enable_rag", payload={"action": "enable"}, label="✅ Включить RAG"),
+        cl.Action(name="disable_rag", payload={"action": "disable"}, label="❌ Выключить RAG"),
+        cl.Action(name="enable_filter", payload={"action": "enable"}, label="🔍 Включить фильтр"),
+        cl.Action(name="disable_filter", payload={"action": "disable"}, label="🔓 Выключить фильтр"),
     ]
 
+    filter_status = "✅" if rag_filter_enabled else "❌"
+
     await cl.Message(
-        content="Привет! Я AI ассистент с доступом к инструментам напоминаний и базе знаний о городах России.\n\n"
-                "**RAG сейчас: ✅ ВКЛЮЧЕН**\n\n"
-                "Используй кнопки ниже для управления RAG или напиши команду:\n"
-                "• `/rag on` - включить RAG\n"
-                "• `/rag off` - выключить RAG\n\n"
-                "Попробуй спросить о городах: Москва, Волгоград, Зеленогдар, Орск и других!",
+        content=f"""Привет! Я AI ассистент с доступом к базе знаний о городах России.
+
+**Текущие настройки:**
+• RAG: ✅ ВКЛЮЧЕН
+• Фильтр релевантности: {filter_status} (порог: {rag_min_score:.2f})
+
+**Команды управления:**
+• `/rag on|off` - включить/выключить RAG
+• `/filter on|off` - включить/выключить фильтр
+• `/filter set 0.75` - установить порог релевантности
+
+Попробуй спросить о городах: Москва, Волгоград, Тверь и других!""",
         actions=actions
     ).send()
     client = OpenRouterClient()
@@ -154,6 +228,26 @@ async def on_disable_rag(action: cl.Action):
     await cl.Message(content="❌ **RAG ВЫКЛЮЧЕН**. Буду отвечать без базы знаний!").send()
 
 
+@cl.action_callback("enable_filter")
+async def on_enable_filter(action: cl.Action):
+    """Включает фильтр релевантности."""
+    cl.user_session.set("use_rag_filter", True)
+    min_score = cl.user_session.get("rag_min_score", 0.7)
+    await cl.Message(
+        content=f"🔍 **Фильтр релевантности ВКЛЮЧЕН** (порог: {min_score:.2f})\n\n"
+                f"Результаты с score < {min_score:.2f} будут отбрасываться."
+    ).send()
+
+
+@cl.action_callback("disable_filter")
+async def on_disable_filter(action: cl.Action):
+    """Выключает фильтр релевантности."""
+    cl.user_session.set("use_rag_filter", False)
+    await cl.Message(
+        content="🔓 **Фильтр релевантности ВЫКЛЮЧЕН**\n\nПоказываю все результаты поиска."
+    ).send()
+
+
 @cl.on_message
 async def on_message(message: cl.Message):
     """Обработка входящего сообщения пользователя."""
@@ -167,6 +261,38 @@ async def on_message(message: cl.Message):
         await cl.Message(content="❌ **RAG ВЫКЛЮЧЕН**. Буду отвечать без базы знаний!").send()
         return
 
+    # Команды управления фильтром
+    if message.content.strip().lower() == "/filter on":
+        cl.user_session.set("use_rag_filter", True)
+        min_score = cl.user_session.get("rag_min_score", 0.7)
+        await cl.Message(
+            content=f"🔍 **Фильтр ВКЛЮЧЕН** (порог: {min_score:.2f})"
+        ).send()
+        return
+    elif message.content.strip().lower() == "/filter off":
+        cl.user_session.set("use_rag_filter", False)
+        await cl.Message(
+            content="🔓 **Фильтр ВЫКЛЮЧЕН**"
+        ).send()
+        return
+    elif message.content.strip().lower().startswith("/filter set "):
+        try:
+            new_threshold = float(message.content.split()[-1])
+            if 0.0 <= new_threshold <= 1.0:
+                cl.user_session.set("rag_min_score", new_threshold)
+                await cl.Message(
+                    content=f"🔍 **Порог фильтра изменен на {new_threshold:.2f}**"
+                ).send()
+            else:
+                await cl.Message(
+                    content="❌ Порог должен быть между 0.0 и 1.0"
+                ).send()
+        except ValueError:
+            await cl.Message(
+                content="❌ Неверный формат. Используй: `/filter set 0.75`"
+            ).send()
+        return
+
     client = cl.user_session.get("client")
     history = cl.user_session.get("history")
 
@@ -175,36 +301,53 @@ async def on_message(message: cl.Message):
     use_rag = cl.user_session.get("use_rag", True)
     if RAG_INDEX and use_rag and should_use_rag(message.content):
         try:
-            logger.info(f"Выполняю RAG-поиск для запроса: {message.content[:50]}...")
-            search_results = RAG_INDEX.search(message.content, k=3)
+            # Получаем параметры фильтрации
+            use_filter = cl.user_session.get("use_rag_filter", True)
+            min_score = cl.user_session.get("rag_min_score", 0.7)
 
-            if search_results:
-                rag_context = format_rag_context(search_results)
-                logger.info(f"Найдено {len(search_results)} релевантных документов")
+            logger.info(
+                f"RAG-поиск: query='{message.content[:50]}' | "
+                f"filter={use_filter} | min_score={min_score}"
+            )
 
-                # Формируем сообщение с деталями найденных документов
-                details_lines = [f"**[RAG] Найдено {len(search_results)} релевантных документов:**\n"]
-                for i, result in enumerate(search_results, 1):
-                    city = result.get("city", "Неизвестно")
-                    text = result.get("text", "")
-                    score = result.get("score", 0.0)
-                    preview = text[:100] + "..." if len(text) > 100 else text
-                    details_lines.append(
-                        f"{i}. **{city}** (релевантность: {score:.2f})\n   _{preview}_"
-                    )
+            # Вызываем search с параметрами фильтрации
+            search_data = RAG_INDEX.search(
+                message.content,
+                k=3,
+                min_score=min_score if use_filter else None,
+                apply_filter=use_filter
+            )
 
-                # Отправляем сообщение с результатами
-                msg_content = "\n\n".join(details_lines)
-                logger.info(f"[DEBUG] Отправляю RAG-сообщение в Chainlit, длина: {len(msg_content)}")
-                msg = cl.Message(content=msg_content)
-                await msg.send()
-                logger.info(f"[DEBUG] RAG-сообщение отправлено, ID: {msg.id}")
+            # Извлекаем данные
+            all_results = search_data["all_results"]
+            filtered_results = search_data["filtered_results"]
+            filter_applied = search_data["filter_applied"]
+
+            # Обработка случая, когда все результаты отфильтрованы
+            if filter_applied and not filtered_results and all_results:
+                logger.warning(
+                    "Все результаты отклонены фильтром, возвращаю топ-1 с предупреждением"
+                )
+                filtered_results = [all_results[0]]
+                await cl.Message(
+                    content=f"⚠️ **Предупреждение:** Нет результатов выше порога {min_score:.2f}, "
+                            f"показываю лучший результат (score: {all_results[0]['score']:.2f})"
+                ).send()
+
+            if filtered_results:
+                # Формируем контекст для промпта
+                rag_context = format_rag_context(filtered_results)
+
+                # Визуализация результатов
+                await display_rag_results(
+                    all_results=all_results,
+                    filtered_results=filtered_results,
+                    filter_applied=filter_applied,
+                    min_score=min_score
+                )
         except Exception as e:
             logger.error(f"Ошибка RAG-поиска: {e}", exc_info=True)
-            try:
-                await cl.Message(content=f"**[RAG]** ❌ Ошибка поиска: {e}").send()
-            except Exception as e2:
-                logger.error(f"Ошибка отправки сообщения об ошибке: {e2}", exc_info=True)
+            await cl.Message(content=f"**[RAG]** ❌ Ошибка поиска: {e}").send()
 
     # Базовый промпт
     base_prompt = """Ты полезный AI ассистент с доступом к инструментам управления напоминаниями и отправки email.
