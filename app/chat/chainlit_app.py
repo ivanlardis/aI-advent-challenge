@@ -37,18 +37,8 @@ def auth_callback(username: str, password: str) -> Optional[cl.User]:
 
 
 def should_use_rag(user_input: str) -> bool:
-    """Определяет необходимость RAG-поиска по ключевым словам."""
-    keywords = [
-        "город", "города", "городе", "городов", "городах",
-        "федеральный округ", "регион", "область",
-        "расположен", "находится", "где",
-        # Названия городов пользователя
-        "москва", "санкт-петербург", "волгоград", "самара",
-        "зеленогдар", "орск", "батино",
-        "тула", "брянск", "казань", "новосибирск", "екатеринбург"
-    ]
-    user_input_lower = user_input.lower()
-    return any(keyword in user_input_lower for keyword in keywords)
+    """RAG используется для всех запросов."""
+    return True
 
 
 def format_rag_context(results: List[Dict[str, Any]]) -> str:
@@ -64,6 +54,21 @@ def format_rag_context(results: List[Dict[str, Any]]) -> str:
         parts.append(f"{i}. {city}: {text} (релевантность: {score:.2f})")
 
     return "\n".join(parts)
+
+
+def format_sources(results: List[Dict[str, Any]]) -> str:
+    """Форматирует источники для вывода в ответ ассистента."""
+    if not results:
+        return ""
+
+    lines = ["\n\n---\n**📚 Источники:**"]
+    for i, result in enumerate(results, 1):
+        city = result.get("city", "Неизвестно")
+        source = result.get("source", "rag_example_cities_ru.txt")
+        score = result.get("score", 0.0)
+        lines.append(f"{i}. {city} (релевантность: {score:.2f}) — `{source}`")
+
+    return "\n".join(lines)
 
 
 async def display_rag_results(
@@ -298,6 +303,7 @@ async def on_message(message: cl.Message):
 
     # RAG-поиск если нужно
     rag_context = ""
+    rag_sources = []
     use_rag = cl.user_session.get("use_rag", True)
     if RAG_INDEX and use_rag and should_use_rag(message.content):
         try:
@@ -337,6 +343,7 @@ async def on_message(message: cl.Message):
             if filtered_results:
                 # Формируем контекст для промпта
                 rag_context = format_rag_context(filtered_results)
+                rag_sources = filtered_results
 
                 # Визуализация результатов
                 await display_rag_results(
@@ -372,7 +379,8 @@ async def on_message(message: cl.Message):
 {rag_context}
 
 Используй найденную информацию для ответа на вопрос пользователя о городах.
-Если информация не найдена в базе, честно скажи об этом."""
+Если информация не найдена в базе, честно скажи об этом.
+**ВАЖНО:** Формируй свой ответ естественным образом. Список источников будет добавлен автоматически после твоего ответа."""
     else:
         system_prompt = base_prompt
 
@@ -410,8 +418,14 @@ async def on_message(message: cl.Message):
             metadata={"mcp_log": True, "tool": name},
         ).send()
 
-    await cl.Message(content=assistant_message).send()
+    # Формируем финальное сообщение с источниками
+    final_message = assistant_message
+    if rag_sources:
+        sources_text = format_sources(rag_sources)
+        final_message = assistant_message + sources_text
+
+    await cl.Message(content=final_message).send()
 
     history.append({"role": "user", "content": message.content})
-    history.append({"role": "assistant", "content": assistant_message})
+    history.append({"role": "assistant", "content": final_message})
     cl.user_session.set("history", history)
