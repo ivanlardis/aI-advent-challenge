@@ -49,9 +49,17 @@ class TfIdfVectorizer {
      */
     fun computeIdf(token: String): Double {
         val df = documentFrequency[token] ?: 0
-        if (df == 0) return 0.0
+        if (df == 0) {
+            // Для неизвестных токенов используем максимальный IDF (сглаживание)
+            return if (totalDocuments > 0) {
+                log10(totalDocuments.toDouble() + 1.0)
+            } else {
+                1.0
+            }
+        }
 
-        return log10(totalDocuments.toDouble() / df)
+        // Добавляем сглаживание +1 для избежания деления на 0
+        return log10((totalDocuments.toDouble() + 1.0) / (df + 1.0))
     }
 
     /**

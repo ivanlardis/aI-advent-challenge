@@ -11,7 +11,7 @@ object Config {
 
     // RAG настройки
     const val RAG_TOP_K = 5 // количество релевантных документов для поиска
-    const val RAG_MIN_SIMILARITY = 0.3 // минимальное косинусное сходство для фильтрации
+    const val RAG_MIN_SIMILARITY = 0.05 // минимальное косинусное сходство для фильтрации
 
     // Поддерживаемые расширения файлов
     val SUPPORTED_EXTENSIONS = setOf("kt", "java", "md")
