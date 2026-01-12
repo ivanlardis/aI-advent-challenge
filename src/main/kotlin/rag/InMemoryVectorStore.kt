@@ -1,26 +1,21 @@
 package rag
 
 import parser.Document
+import rag.embeddings.Vectorizer
 
 /**
- * In-memory хранилище для документов и их векторов
+ * In-memory хранилище для документов и их dense-векторов.
  */
-class InMemoryVectorStore(private val vectorizer: TfIdfVectorizer) {
+class InMemoryVectorStore(private val vectorizer: Vectorizer) {
     private val documents = mutableListOf<Document>()
-    private val vectors = mutableListOf<Map<String, Double>>()
+    private val vectors = mutableListOf<FloatArray>()
 
-    /**
-     * Добавить документ и его вектор в хранилище
-     */
-    fun addDocument(doc: Document, vector: Map<String, Double>) {
+    fun addDocument(doc: Document, vector: FloatArray) {
         documents.add(doc)
         vectors.add(vector)
     }
 
-    /**
-     * Поиск релевантных документов по query вектору
-     */
-    fun search(queryVector: Map<String, Double>, topK: Int, minSimilarity: Double = 0.0): List<SearchResult> {
+    fun search(queryVector: FloatArray, topK: Int, minSimilarity: Double = 0.0): List<SearchResult> {
         if (documents.isEmpty()) return emptyList()
 
         val results = documents.indices.map { idx ->
@@ -37,21 +32,12 @@ class InMemoryVectorStore(private val vectorizer: TfIdfVectorizer) {
             .take(topK)
     }
 
-    /**
-     * Очистить хранилище
-     */
     fun clear() {
         documents.clear()
         vectors.clear()
     }
 
-    /**
-     * Получить размер хранилища
-     */
     fun size(): Int = documents.size
 
-    /**
-     * Получить все документы
-     */
     fun getAllDocuments(): List<Document> = documents.toList()
 }

@@ -1,15 +1,21 @@
 package cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import com.github.ajalt.clikt.parameters.options.help
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import llm.Message
 import llm.OpenRouterClient
 import llm.PromptBuilder
 import mcp.GitTools
 import mcp.McpServer
 import rag.*
+import rag.embeddings.OnnxEmbeddingVectorizer
 
 /**
  * Главная CLI команда
@@ -22,7 +28,7 @@ class AssistantCommand : CliktCommand(
         .help("Путь к home директории проекта")
         .required()
 
-    private lateinit var vectorizer: TfIdfVectorizer
+    private lateinit var vectorizer: OnnxEmbeddingVectorizer
     private lateinit var vectorStore: InMemoryVectorStore
     private lateinit var indexer: DocumentIndexer
     private lateinit var ragService: RagService
@@ -36,7 +42,15 @@ class AssistantCommand : CliktCommand(
         echo("")
 
         // Инициализация компонентов
-        vectorizer = TfIdfVectorizer()
+        echo("Загрузка ONNX модели...")
+        vectorizer = try {
+            OnnxEmbeddingVectorizer()
+        } catch (e: Exception) {
+            echo("Не удалось загрузить ONNX модель: ${e.message}")
+            return
+        }
+        echo("Модель загружена (размерность: ${vectorizer.dimension})")
+
         vectorStore = InMemoryVectorStore(vectorizer)
         indexer = DocumentIndexer(vectorizer, vectorStore)
         ragService = RagService(vectorizer, vectorStore)
@@ -48,6 +62,9 @@ class AssistantCommand : CliktCommand(
         startInteractiveMode()
 
         // Закрытие ресурсов
+        if (this::vectorizer.isInitialized) {
+            vectorizer.close()
+        }
         llmClient.close()
         gitTools.close()
     }
@@ -83,6 +100,7 @@ class AssistantCommand : CliktCommand(
                 input == "/help" -> showHelp()
                 input == "/index" -> runIndexCommand()
                 input == "/git" -> showGitInfo()
+                input == "/git-changes" -> showGitChanges()
                 input == "/stats" -> showStats()
                 else -> answerQuestion(input)
             }
@@ -100,6 +118,7 @@ class AssistantCommand : CliktCommand(
             /index  - Переиндексировать проект
             /help   - Показать эту справку
             /git    - Показать информацию о git-репозитории
+            /git-changes - Показать незакоммиченные/новые файлы
             /stats  - Показать статистику индекса
             /exit   - Выход из программы
 
@@ -131,7 +150,6 @@ class AssistantCommand : CliktCommand(
             echo("  Kotlin:   ${stats.kotlinFiles}")
             echo("  Java:     ${stats.javaFiles}")
             echo("  Markdown: ${stats.markdownFiles}")
-            echo("Всего токенов: ${stats.totalTokens}")
 
         } catch (e: Exception) {
             echo("Ошибка при индексации: ${e.message}")
@@ -140,6 +158,10 @@ class AssistantCommand : CliktCommand(
 
     private fun showGitInfo() {
         echo(mcpServer.getGitInfo())
+    }
+
+    private fun showGitChanges() {
+        echo(mcpServer.getUncommittedFiles())
     }
 
     private fun showStats() {
@@ -172,15 +194,76 @@ class AssistantCommand : CliktCommand(
         }
         echo("")
 
+        val extraContext = buildMcpContextIfNeeded(query)
+        if (extraContext != null) {
+            echo("Добавлен контекст из MCP (git).")
+        }
+
         // Запрос к LLM
         echo("Отправка запроса к LLM...")
-        val messages = PromptBuilder.buildMessages(query, ragResults)
+        val messages = PromptBuilder.buildMessages(query, ragResults, extraContext)
+        val initialResponse = runBlocking { llmClient.chat(messages) }
+        val tool = parseToolCall(initialResponse)
 
-        runBlocking {
-            val response = llmClient.chat(messages)
-            echo("")
-            echo("=== Ответ ===")
-            echo(response)
+        if (tool != null) {
+            echo("LLM запросила MCP: $tool")
+            val toolResult = when (tool) {
+                "git_info" -> mcpServer.getGitInfo()
+                "git_uncommitted" -> mcpServer.getUncommittedFiles()
+                else -> null
+            }
+
+            if (toolResult != null) {
+                val followUp = messages +
+                    Message(role = "assistant", content = initialResponse) +
+                    Message(
+                        role = "system",
+                        content = "Результат MCP ($tool):\n$toolResult"
+                    ) +
+                    Message(
+                        role = "user",
+                        content = "Дай окончательный ответ пользователю с учетом результата MCP выше."
+                    )
+
+                val finalResponse = runBlocking { llmClient.chat(followUp) }
+                echo("")
+                echo("=== Ответ ===")
+                echo(finalResponse)
+                return
+            }
+        }
+
+        echo("")
+        echo("=== Ответ ===")
+        echo(initialResponse)
+    }
+
+    private fun buildMcpContextIfNeeded(query: String): String? {
+        val q = query.lowercase()
+        val gitKeywords = listOf("git", "гит", "ветк", "branch", "commit", "коммит", "репозитор", "статус", "status")
+        val needsGit = gitKeywords.any { q.contains(it) }
+        val needsChanges = listOf("изменен", "изменения", "uncommitted", "untracked", "новые файлы", "не закоммит", "modified", "diff", "diffs")
+            .any { q.contains(it) }
+
+        if (!needsGit && !needsChanges) return null
+
+        return buildString {
+            appendLine(mcpServer.getGitInfo())
+            if (needsChanges) {
+                appendLine()
+                appendLine(mcpServer.getUncommittedFiles())
+            }
+        }.trim()
+    }
+
+    private fun parseToolCall(response: String): String? {
+        val trimmed = response.trim()
+        if (!trimmed.startsWith("{")) return null
+        return try {
+            val json = kotlinx.serialization.json.Json.parseToJsonElement(trimmed)
+            json.jsonObject["tool"]?.jsonPrimitive?.contentOrNull
+        } catch (_: Exception) {
+            null
         }
     }
 }

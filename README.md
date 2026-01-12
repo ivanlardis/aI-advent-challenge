@@ -63,7 +63,6 @@ const val OPENROUTER_MODEL = "anthropic/claude-3.5-sonnet"
 > /index
 Начинаю индексацию проекта...
 Найдено файлов: 42
-Вычисление статистики...
 Индексация документов...
 Индексация завершена!
 
@@ -72,7 +71,6 @@ const val OPENROUTER_MODEL = "anthropic/claude-3.5-sonnet"
   Kotlin:   30
   Java:     5
   Markdown: 7
-Всего токенов: 15430
 
 > Как работает аутентификация?
 Поиск релевантных документов...
@@ -97,10 +95,15 @@ src/main/kotlin/
 ├── cli/
 │   └── AssistantCommand.kt  # CLI интерфейс
 ├── rag/
-│   ├── TfIdfVectorizer.kt   # Векторизация
 │   ├── InMemoryVectorStore.kt
 │   ├── RagService.kt
-│   └── DocumentIndexer.kt
+│   ├── DocumentIndexer.kt
+│   └── embeddings/
+│       ├── Vectorizer.kt                # Общий интерфейс векторизации
+│       ├── OnnxEmbeddingVectorizer.kt   # Основной ONNX векторизатор
+│       └── LegacyTfIdfVectorizer.kt     # TF-IDF (legacy)
+├── resources/
+│   └── models/                         # ONNX модель + токенизатор
 ├── llm/
 │   ├── OpenRouterClient.kt  # LLM клиент
 │   └── PromptBuilder.kt
@@ -122,7 +125,7 @@ src/main/kotlin/
 - **Clikt** - CLI framework
 - **Ktor Client** - HTTP клиент для OpenRouter
 - **JGit** - Git интеграция
-- **TF-IDF** - векторизация текста
+- **ONNX embeddings** - векторизация текста (Sentence Transformers)
 
 ## Разработка
 

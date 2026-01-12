@@ -1,17 +1,15 @@
 package rag
 
 import config.Config
+import rag.embeddings.Vectorizer
 
 /**
- * RAG сервис для поиска релевантных документов
+ * RAG сервис для поиска релевантных документов.
  */
 class RagService(
-    private val vectorizer: TfIdfVectorizer,
+    private val vectorizer: Vectorizer,
     private val vectorStore: InMemoryVectorStore
 ) {
-    /**
-     * Поиск релевантных документов по запросу пользователя
-     */
     fun search(query: String): List<SearchResult> {
         val queryVector = vectorizer.vectorize(query)
 
@@ -22,8 +20,5 @@ class RagService(
         )
     }
 
-    /**
-     * Получить количество проиндексированных документов
-     */
     fun getIndexSize(): Int = vectorStore.size()
 }

@@ -21,4 +21,19 @@ class McpServer(private val gitTools: GitTools) {
             status.forEach { appendLine("  $it") }
         }
     }
+
+    /**
+     * Получить список не закоммиченных/неотслеживаемых файлов.
+     */
+    fun getUncommittedFiles(): String {
+        val status = gitTools.getStatus().filterNot { it == "Нет изменений" || it.startsWith("Не является") }
+        return buildString {
+            appendLine("=== Uncommitted files ===")
+            if (status.isEmpty()) {
+                appendLine("Нет изменений")
+            } else {
+                status.forEach { appendLine(it) }
+            }
+        }
+    }
 }

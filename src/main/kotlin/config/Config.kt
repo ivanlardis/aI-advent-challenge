@@ -10,8 +10,8 @@ object Config {
     const val OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
     // RAG настройки
-    const val RAG_TOP_K = 5 // количество релевантных документов для поиска
-    const val RAG_MIN_SIMILARITY = 0.05 // минимальное косинусное сходство для фильтрации
+    const val RAG_TOP_K = 10 // количество релевантных документов для поиска
+    const val RAG_MIN_SIMILARITY = 0.01 // минимальное косинусное сходство для фильтрации
 
     // Поддерживаемые расширения файлов
     val SUPPORTED_EXTENSIONS = setOf("kt", "java", "md")
