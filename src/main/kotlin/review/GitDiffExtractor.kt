@@ -24,35 +24,55 @@ class GitDiffExtractor {
                 return Result.failure(Exception("gh CLI не найден. Установите: https://cli.github.com/"))
             }
 
-            // Получить список измененных файлов
-            val process = ProcessBuilder(
+            // Получить список измененных файлов через --name-only
+            val nameOnlyProcess = ProcessBuilder(
                 "gh", "pr", "diff", prNumber.toString(),
-                "--name-status"
+                "--name-only"
             )
                 .directory(File(repoPath))
                 .redirectErrorStream(true)
                 .start()
 
-            val output = process.inputStream.bufferedReader().readText()
-            val exitCode = process.waitFor()
+            val nameOnlyOutput = nameOnlyProcess.inputStream.bufferedReader().readText()
+            val exitCode = nameOnlyProcess.waitFor()
 
             if (exitCode != 0) {
-                return Result.failure(Exception("Ошибка gh CLI: $output"))
+                return Result.failure(Exception("Ошибка gh CLI: $nameOnlyOutput"))
             }
 
-            // Парсинг вывода формата: "A\tfile.kt" или "M\tfile.kt"
-            val lines = output.trim().lines().filter { it.isNotBlank() }
+            // Парсинг списка файлов
+            val fileNames = nameOnlyOutput.trim().lines().filter { it.isNotBlank() }
+
+            if (fileNames.isEmpty()) {
+                return Result.failure(Exception("PR не содержит изменений"))
+            }
+
+            // Получить статусы файлов через git diff
+            val gitStatusProcess = ProcessBuilder(
+                "git", "diff", "--name-status",
+                "origin/main...HEAD"
+            )
+                .directory(File(repoPath))
+                .redirectErrorStream(false)
+                .start()
+
+            val gitStatusOutput = gitStatusProcess.inputStream.bufferedReader().readText()
+            gitStatusProcess.waitFor()
+
+            // Создать map статусов файлов
+            val fileStatusMap = mutableMapOf<String, String>()
+            gitStatusOutput.trim().lines().forEach { line ->
+                val parts = line.split("\t", limit = 2)
+                if (parts.size == 2) {
+                    fileStatusMap[parts[1].trim()] = parts[0].trim()
+                }
+            }
+
             val changedFiles = mutableListOf<ChangedFile>()
             var totalAdditions = 0
             var totalDeletions = 0
 
-            for (line in lines) {
-                val parts = line.split("\t", limit = 2)
-                if (parts.size != 2) continue
-
-                val statusChar = parts[0].trim()
-                val filePath = parts[1].trim()
-
+            for (filePath in fileNames) {
                 // Фильтр по расширениям
                 val extension = filePath.substringAfterLast('.', "")
                 if (extension !in Config.SUPPORTED_EXTENSIONS) {
@@ -60,14 +80,12 @@ class GitDiffExtractor {
                     continue
                 }
 
-                val changeType = when (statusChar) {
-                    "A" -> ChangeType.ADD
-                    "M" -> ChangeType.MODIFY
-                    "D" -> ChangeType.DELETE
-                    else -> {
-                        logger.warn("Неизвестный статус: $statusChar для $filePath")
-                        ChangeType.MODIFY
-                    }
+                // Определить тип изменения
+                val statusChar = fileStatusMap[filePath] ?: "M"
+                val changeType = when {
+                    statusChar.startsWith("A") -> ChangeType.ADD
+                    statusChar.startsWith("D") -> ChangeType.DELETE
+                    else -> ChangeType.MODIFY
                 }
 
                 // Читать содержимое файла (кроме удаленных)
