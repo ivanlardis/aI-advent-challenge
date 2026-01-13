@@ -24,4 +24,6 @@ object Config {
     // Review limits
     const val REVIEW_MAX_FILES = 30 // максимум файлов для анализа
     const val REVIEW_MAX_LINES_PER_FILE = 500 // максимум строк на файл
+
+    const val ТЕСТ_пр_ai_КОДЕ_ресью = 50011
 }
