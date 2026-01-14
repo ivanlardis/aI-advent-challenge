@@ -1,0 +1,154 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Иван Петров",
+      "email": "ivan.petrov@example.com",
+      "phone": "+7 (901) 234-56-78",
+      "status": "active",
+      "registeredAt": "2025-03-15",
+      "city": "Москва",
+      "loyaltyLevel": "gold"
+    },
+    {
+      "id": 2,
+      "name": "Мария Сидорова",
+      "email": "maria.sidorova@example.com",
+      "phone": "+7 (902) 345-67-89",
+      "status": "active",
+      "registeredAt": "2025-05-20",
+      "city": "Санкт-Петербург",
+      "loyaltyLevel": "platinum"
+    },
+    {
+      "id": 3,
+      "name": "Петр Козлов",
+      "email": "petr.kozlov@example.com",
+      "phone": "+7 (903) 456-78-90",
+      "status": "inactive",
+      "registeredAt": "2024-08-20",
+      "city": "Казань",
+      "loyaltyLevel": "bronze"
+    },
+    {
+      "id": 4,
+      "name": "Анна Иванова",
+      "email": "anna.ivanova@example.com",
+      "phone": "+7 (904) 567-89-01",
+      "status": "active",
+      "registeredAt": "2025-11-05",
+      "city": "Екатеринбург",
+      "loyaltyLevel": "silver"
+    },
+    {
+      "id": 5,
+      "name": "Сергей Николаев",
+      "email": "sergey.nikolaev@example.com",
+      "phone": "+7 (905) 678-90-12",
+      "status": "active",
+      "registeredAt": "2025-07-10",
+      "city": "Новосибирск",
+      "loyaltyLevel": "gold"
+    },
+    {
+      "id": 6,
+      "name": "Ольга Смирнова",
+      "email": "olga.smirnova@example.com",
+      "phone": "+7 (906) 789-01-23",
+      "status": "active",
+      "registeredAt": "2025-09-15",
+      "city": "Москва",
+      "loyaltyLevel": "platinum"
+    },
+    {
+      "id": 7,
+      "name": "Дмитрий Волков",
+      "email": "dmitry.volkov@example.com",
+      "phone": "+7 (907) 890-12-34",
+      "status": "active",
+      "registeredAt": "2025-10-01",
+      "city": "Краснодар",
+      "loyaltyLevel": "silver"
+    },
+    {
+      "id": 8,
+      "name": "Елена Морозова",
+      "email": "elena.morozova@example.com",
+      "phone": "+7 (908) 901-23-45",
+      "status": "active",
+      "registeredAt": "2025-06-12",
+      "city": "Ростов-на-Дону",
+      "loyaltyLevel": "gold"
+    },
+    {
+      "id": 9,
+      "name": "Александр Белов",
+      "email": "alex.belov@example.com",
+      "phone": "+7 (909) 012-34-56",
+      "status": "active",
+      "registeredAt": "2025-12-20",
+      "city": "Самара",
+      "loyaltyLevel": "bronze"
+    },
+    {
+      "id": 10,
+      "name": "Наталья Соколова",
+      "email": "natalia.sokolova@example.com",
+      "phone": "+7 (910) 123-45-67",
+      "status": "active",
+      "registeredAt": "2025-04-08",
+      "city": "Нижний Новгород",
+      "loyaltyLevel": "silver"
+    },
+    {
+      "id": 11,
+      "name": "Михаил Орлов",
+      "email": "mikhail.orlov@example.com",
+      "phone": "+7 (911) 234-56-78",
+      "status": "active",
+      "registeredAt": "2025-08-25",
+      "city": "Воронеж",
+      "loyaltyLevel": "gold"
+    },
+    {
+      "id": 12,
+      "name": "Татьяна Лебедева",
+      "email": "tatiana.lebedeva@example.com",
+      "phone": "+7 (912) 345-67-89",
+      "status": "active",
+      "registeredAt": "2025-02-14",
+      "city": "Пермь",
+      "loyaltyLevel": "platinum"
+    },
+    {
+      "id": 13,
+      "name": "Владимир Зайцев",
+      "email": "vladimir.zaytsev@example.com",
+      "phone": "+7 (913) 456-78-90",
+      "status": "inactive",
+      "registeredAt": "2024-11-11",
+      "city": "Омск",
+      "loyaltyLevel": "bronze"
+    },
+    {
+      "id": 14,
+      "name": "Светлана Кузнецова",
+      "email": "svetlana.kuznetsova@example.com",
+      "phone": "+7 (914) 567-89-01",
+      "status": "active",
+      "registeredAt": "2025-01-22",
+      "city": "Челябинск",
+      "loyaltyLevel": "silver"
+    },
+    {
+      "id": 15,
+      "name": "Андрей Попов",
+      "email": "andrey.popov@example.com",
+      "phone": "+7 (915) 678-90-12",
+      "status": "active",
+      "registeredAt": "2025-11-30",
+      "city": "Уфа",
+      "loyaltyLevel": "gold"
+    }
+  ]
+}

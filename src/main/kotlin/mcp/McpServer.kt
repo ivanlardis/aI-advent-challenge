@@ -1,10 +1,13 @@
 package mcp
 
 /**
- * Простой MCP сервер для git-операций
+ * Простой MCP сервер для git-операций и CRM данных
  * В текущей реализации используется напрямую из CLI
  */
-class McpServer(private val gitTools: GitTools) {
+class McpServer(
+    private val gitTools: GitTools,
+    private val crmTools: CrmTools
+) {
     /**
      * Получить информацию о git-репозитории
      */
@@ -36,4 +39,11 @@ class McpServer(private val gitTools: GitTools) {
             }
         }
     }
+
+    // CRM методы
+    fun getUser(emailOrId: String) = crmTools.getUser(emailOrId)
+    fun listUsers() = crmTools.listUsers()
+    fun getUserTickets(userId: String) = crmTools.getUserTickets(userId)
+    fun getTicket(ticketId: String) = crmTools.getTicket(ticketId)
+    fun getUserSubscriptions(userId: String) = crmTools.getUserSubscriptions(userId)
 }

@@ -12,6 +12,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import llm.Message
 import llm.OpenRouterClient
 import llm.PromptBuilder
+import mcp.CrmTools
 import mcp.GitTools
 import mcp.McpServer
 import rag.*
@@ -34,6 +35,7 @@ class AssistantCommand : CliktCommand(
     private lateinit var ragService: RagService
     private lateinit var llmClient: OpenRouterClient
     private lateinit var gitTools: GitTools
+    private lateinit var crmTools: CrmTools
     private lateinit var mcpServer: McpServer
 
     override fun run() {
@@ -56,7 +58,8 @@ class AssistantCommand : CliktCommand(
         ragService = RagService(vectorizer, vectorStore)
         llmClient = OpenRouterClient()
         gitTools = GitTools(homeDir)
-        mcpServer = McpServer(gitTools)
+        crmTools = CrmTools("$homeDir/crm-data")
+        mcpServer = McpServer(gitTools, crmTools)
 
         // Запуск интерактивного режима
         startInteractiveMode()
@@ -207,9 +210,26 @@ class AssistantCommand : CliktCommand(
 
         if (tool != null) {
             echo("LLM запросила MCP: $tool")
-            val toolResult = when (tool) {
-                "git_info" -> mcpServer.getGitInfo()
-                "git_uncommitted" -> mcpServer.getUncommittedFiles()
+            val toolResult = when {
+                tool.startsWith("crm_get_user:") -> {
+                    val arg = tool.substringAfter("crm_get_user:").trim()
+                    mcpServer.getUser(arg)
+                }
+                tool == "crm_list_users" -> mcpServer.listUsers()
+                tool.startsWith("crm_get_user_tickets:") -> {
+                    val userId = tool.substringAfter("crm_get_user_tickets:").trim()
+                    mcpServer.getUserTickets(userId)
+                }
+                tool.startsWith("crm_get_ticket:") -> {
+                    val ticketId = tool.substringAfter("crm_get_ticket:").trim()
+                    mcpServer.getTicket(ticketId)
+                }
+                tool.startsWith("crm_get_user_subscriptions:") -> {
+                    val userId = tool.substringAfter("crm_get_user_subscriptions:").trim()
+                    mcpServer.getUserSubscriptions(userId)
+                }
+                tool == "git_info" -> mcpServer.getGitInfo()
+                tool == "git_uncommitted" -> mcpServer.getUncommittedFiles()
                 else -> null
             }
 
@@ -245,13 +265,23 @@ class AssistantCommand : CliktCommand(
         val needsChanges = listOf("изменен", "изменения", "uncommitted", "untracked", "новые файлы", "не закоммит", "modified", "diff", "diffs")
             .any { q.contains(it) }
 
-        if (!needsGit && !needsChanges) return null
+        val crmKeywords = listOf("пользовател", "user", "тикет", "ticket", "подписк", "subscription", "план", "plan", "клиент", "client", "crm")
+        val needsCrm = crmKeywords.any { q.contains(it) }
+
+        if (!needsGit && !needsChanges && !needsCrm) return null
 
         return buildString {
-            appendLine(mcpServer.getGitInfo())
-            if (needsChanges) {
-                appendLine()
-                appendLine(mcpServer.getUncommittedFiles())
+            if (needsGit || needsChanges) {
+                appendLine(mcpServer.getGitInfo())
+                if (needsChanges) {
+                    appendLine()
+                    appendLine(mcpServer.getUncommittedFiles())
+                }
+            }
+
+            if (needsCrm) {
+                if (isNotEmpty()) appendLine()
+                appendLine(mcpServer.listUsers())
             }
         }.trim()
     }
@@ -260,8 +290,15 @@ class AssistantCommand : CliktCommand(
         val trimmed = response.trim()
         if (!trimmed.startsWith("{")) return null
         return try {
-            val json = kotlinx.serialization.json.Json.parseToJsonElement(trimmed)
-            json.jsonObject["tool"]?.jsonPrimitive?.contentOrNull
+            val json = Json.parseToJsonElement(trimmed)
+            val toolObj = json.jsonObject["tool"]?.jsonPrimitive?.contentOrNull
+            val argsObj = json.jsonObject["args"]?.jsonPrimitive?.contentOrNull
+
+            if (toolObj != null && argsObj != null) {
+                "$toolObj:$argsObj"
+            } else {
+                toolObj
+            }
         } catch (_: Exception) {
             null
         }
