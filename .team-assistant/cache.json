@@ -1,0 +1,125 @@
+{
+  "issues": [
+    {
+      "number": 1,
+      "title": "Fix authentication bug in login flow",
+      "state": "open",
+      "created_at": "2026-01-10T10:00:00Z",
+      "updated_at": "2026-01-15T14:30:00Z",
+      "priority_score": 0.87,
+      "commit_count": 42,
+      "rag_relevance": 0.65
+    },
+    {
+      "number": 2,
+      "title": "Add dark mode support to dashboard",
+      "state": "open",
+      "created_at": "2026-01-12T09:15:00Z",
+      "updated_at": "2026-01-15T11:20:00Z",
+      "priority_score": 0.72,
+      "commit_count": 28,
+      "rag_relevance": 0.45
+    },
+    {
+      "number": 3,
+      "title": "Implement real-time updates with WebSocket",
+      "state": "open",
+      "created_at": "2026-01-08T16:45:00Z",
+      "updated_at": "2026-01-14T10:00:00Z",
+      "priority_score": 0.65,
+      "commit_count": 15,
+      "rag_relevance": 0.82
+    },
+    {
+      "number": 4,
+      "title": "Optimize RAG query performance for large repos",
+      "state": "open",
+      "created_at": "2026-01-05T08:30:00Z",
+      "updated_at": "2026-01-13T15:45:00Z",
+      "priority_score": 0.58,
+      "commit_count": 8,
+      "rag_relevance": 0.91
+    },
+    {
+      "number": 5,
+      "title": "Add filtering options to issues API",
+      "state": "open",
+      "created_at": "2026-01-14T11:00:00Z",
+      "updated_at": "2026-01-15T09:30:00Z",
+      "priority_score": 0.52,
+      "commit_count": 5,
+      "rag_relevance": 0.38
+    },
+    {
+      "number": 6,
+      "title": "Create Docker configuration for local development",
+      "state": "open",
+      "created_at": "2026-01-11T13:20:00Z",
+      "updated_at": "2026-01-12T14:15:00Z",
+      "priority_score": 0.48,
+      "commit_count": 3,
+      "rag_relevance": 0.25
+    },
+    {
+      "number": 7,
+      "title": "Write unit tests for priority calculator",
+      "state": "open",
+      "created_at": "2026-01-09T10:45:00Z",
+      "updated_at": "2026-01-10T08:00:00Z",
+      "priority_score": 0.41,
+      "commit_count": 2,
+      "rag_relevance": 0.15
+    },
+    {
+      "number": 8,
+      "title": "Implement cache invalidation on config update",
+      "state": "open",
+      "created_at": "2026-01-13T07:30:00Z",
+      "updated_at": "2026-01-15T12:00:00Z",
+      "priority_score": 0.38,
+      "commit_count": 1,
+      "rag_relevance": 0.55
+    },
+    {
+      "number": 9,
+      "title": "Add OpenAPI/Swagger documentation",
+      "state": "open",
+      "created_at": "2026-01-07T14:20:00Z",
+      "updated_at": "2026-01-11T10:45:00Z",
+      "priority_score": 0.32,
+      "commit_count": 0,
+      "rag_relevance": 0.42
+    },
+    {
+      "number": 10,
+      "title": "Create user guide with examples",
+      "state": "open",
+      "created_at": "2026-01-06T09:00:00Z",
+      "updated_at": "2026-01-09T16:30:00Z",
+      "priority_score": 0.28,
+      "commit_count": 0,
+      "rag_relevance": 0.18
+    },
+    {
+      "number": 11,
+      "title": "Refactor scoring weights to be configurable per repo",
+      "state": "open",
+      "created_at": "2026-01-04T11:15:00Z",
+      "updated_at": "2026-01-08T13:00:00Z",
+      "priority_score": 0.24,
+      "commit_count": 0,
+      "rag_relevance": 0.12
+    },
+    {
+      "number": 12,
+      "title": "Add Prometheus metrics endpoint",
+      "state": "open",
+      "created_at": "2026-01-02T08:45:00Z",
+      "updated_at": "2026-01-07T10:15:00Z",
+      "priority_score": 0.19,
+      "commit_count": 0,
+      "rag_relevance": 0.08
+    }
+  ],
+  "last_updated": "2026-01-15T15:00:00Z"
+}

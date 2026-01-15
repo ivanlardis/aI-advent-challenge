@@ -1,3 +1,4 @@
+
 package llm
 
 import config.Config
@@ -10,6 +11,17 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+
+AI Advent Challenge 5
+100%
+W61
+
+23 task
+гит репа
+https://github.com/ivanlardis/aI-advent-challenge
+видео
+https://disk.yandex.ru/i/rcUrI-ng12mtHg
+
 
 /**
  * HTTP клиент для OpenRouter API
