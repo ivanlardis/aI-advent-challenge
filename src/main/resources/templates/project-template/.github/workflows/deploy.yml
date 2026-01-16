@@ -1,0 +1,44 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t {{PROJECT_SLUG}}:${{ github.sha }} .
+          docker tag {{PROJECT_SLUG}}:${{ github.sha }} {{PROJECT_SLUG}}:latest
+
+      - name: Save Docker image
+        run: docker save {{PROJECT_SLUG}}:latest | gzip > {{PROJECT_SLUG}}.tar.gz
+
+      - name: Copy to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          source: "{{PROJECT_SLUG}}.tar.gz,docker-compose.yml,nginx.conf,Dockerfile"
+          target: "/opt/{{PROJECT_SLUG}}"
+
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            cd /opt/{{PROJECT_SLUG}}
+            docker load < {{PROJECT_SLUG}}.tar.gz
+            docker compose down
+            docker compose up -d
+            docker image prune -f
