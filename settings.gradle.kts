@@ -1,1 +1,1 @@
-rootProject.name = "project-starter"
+rootProject.name = "local-llm-cli"
