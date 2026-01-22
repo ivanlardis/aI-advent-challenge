@@ -23,12 +23,22 @@ class OllamaClient:
         response.raise_for_status()
         return response.json().get("models", [])
 
-    def generate_stream(self, messages: List[Dict], model: str) -> Iterator[Dict]:
+    def generate_stream(
+        self,
+        messages: List[Dict],
+        model: str,
+        temperature: float = None,
+        num_ctx: int = None,
+        num_predict: int = None,
+    ) -> Iterator[Dict]:
         """Генерирует ответ в streaming режиме.
 
         Args:
             messages: История сообщений в формате Ollama API
             model: Название модели
+            temperature: Контроль случайности (0.0-1.0)
+            num_ctx: Размер контекстного окна (токены)
+            num_predict: Максимум токенов в ответе
 
         Yields:
             Чанки ответа от Ollama API
@@ -41,6 +51,18 @@ class OllamaClient:
             "messages": messages,
             "stream": True
         }
+
+        # Добавляем options если заданы параметры
+        options = {}
+        if temperature is not None:
+            options["temperature"] = temperature
+        if num_ctx is not None:
+            options["num_ctx"] = num_ctx
+        if num_predict is not None:
+            options["num_predict"] = num_predict
+
+        if options:
+            payload["options"] = options
 
         response = self.session.post(
             f"{self.host}/api/chat",

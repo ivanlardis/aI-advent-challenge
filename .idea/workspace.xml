@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c6eebe40-b61b-4d10-b460-39d23f1788e7" name="Changes" comment="AI Advent Challenge 25" />
+    <list default="true" id="c6eebe40-b61b-4d10-b460-39d23f1788e7" name="Changes" comment="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/chainlit_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/chainlit_app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/ollama_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/ollama_client.py" afterDir="false" />
+    </list>
     <list id="618c0d81-fbfa-4771-ac01-b75f6ceae876" name="ридми" comment="AI Advent Challenge 12  mcp server + client" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,12 +67,12 @@
   <component name="GitRewordedCommitMessages">
     <option name="commitMessagesMapping">
       <RewordedCommitMessageMapping>
-        <option name="originalMessage" value="AI Advent Challenge 22 - rag плюс опрос" />
-        <option name="rewordedMessage" value="AI Advent Challenge 22 - rag плюс опрос" />
+        <option name="originalMessage" value="docs: add design for local LLM chat application&#10;&#10;Добавлен дизайн Chainlit приложения с интеграцией локальной LLM (Ollama).&#10;Включает архитектуру, поток данных, обработку ошибок и UX решения.&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
+        <option name="rewordedMessage" value="AI Advent Challenge 26" />
       </RewordedCommitMessageMapping>
     </option>
     <option name="currentCommit" value="1" />
-    <option name="onto" value="2af984bbc4723f84745ce19418698f10b46f34b5" />
+    <option name="onto" value="a3a6b01dcac793db8bb298bd0d877303c826a4f2" />
   </component>
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
@@ -307,14 +311,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1763985134187</updated>
-    </task>
-    <task id="LOCAL-00046" summary="AI Advent Challenge 12  mcp server + client">
-      <option name="closed" value="true" />
-      <created>1765930671586</created>
-      <option name="number" value="00046" />
-      <option name="presentableId" value="LOCAL-00046" />
-      <option name="project" value="LOCAL" />
-      <updated>1765930671586</updated>
     </task>
     <task id="LOCAL-00047" summary="AI Advent Challenge 12  mcp server + client">
       <option name="closed" value="true" />
@@ -700,7 +696,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768899026080</updated>
     </task>
-    <option name="localTasksCounter" value="95" />
+    <task id="LOCAL-00095" summary="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;">
+      <option name="closed" value="true" />
+      <created>1769009096067</created>
+      <option name="number" value="00095" />
+      <option name="presentableId" value="LOCAL-00095" />
+      <option name="project" value="LOCAL" />
+      <updated>1769009096067</updated>
+    </task>
+    <option name="localTasksCounter" value="96" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -728,19 +732,7 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="FILTERS">
-                <map>
-                  <entry key="branch">
-                    <value>
-                      <list>
-                        <option value="HEAD" />
-                      </list>
-                    </value>
-                  </entry>
-                </map>
-              </option>
-            </State>
+            <State />
           </value>
         </entry>
         <entry key="d9573d2f-99b0-48b2-9f32-0ce93a607829">
@@ -752,8 +744,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="feat: AI Advent Challenge 8 – token usage experiment" />
-    <MESSAGE value="AI Advent Challenge 8 – token usage experiment" />
     <MESSAGE value="AI Advent Challenge 9 –  add history compression and token summary commands" />
     <MESSAGE value="AI Advent Challenge 10 –  add resume" />
     <MESSAGE value="AI Advent Challenge 11 –  mcp tools reader" />
@@ -776,8 +766,10 @@
     <MESSAGE value="Add quick start guide" />
     <MESSAGE value="Finalize VPS setup with clear SSH key instructions&#10;&#10;VPS Setup Improvements:&#10;- Shows user's public key when auth fails&#10;- Provides exact commands to add key to VPS&#10;- Explains SSH key vs password auth clearly&#10;- Process continues even if VPS setup fails&#10;- Maximum clarity for troubleshooting&#10;&#10;Result: VPS setup always works by either:&#10;1. Auto-setup when password auth available&#10;2. Clear manual setup instructions when keys required&#10;&#10;Project Status:&#10;✅ GitHub repo created&#10;✅ Project template generated&#10;✅ GitHub Secrets configured&#10;✅ VPS setup (auto or manual with instructions)&#10;✅ Process never fails, always completes&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
     <MESSAGE value="AI Advent Challenge 24" />
+    <MESSAGE value="AI Advent Challenge 26" />
     <MESSAGE value="AI Advent Challenge 25" />
-    <option name="LAST_COMMIT_MESSAGE" value="AI Advent Challenge 25" />
+    <MESSAGE value="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
+    <option name="LAST_COMMIT_MESSAGE" value="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
