@@ -4,10 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c6eebe40-b61b-4d10-b460-39d23f1788e7" name="Changes" comment="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;">
+    <list default="true" id="c6eebe40-b61b-4d10-b460-39d23f1788e7" name="Changes" comment="AI Advent Challenge 29 - Локальный аналитик данных&#10;&#10;Создано приложение для анализа структурированных данных (CSV, JSON, LOG)&#10;с использованием локальной LLM через Ollama.&#10;&#10;Основные возможности:&#10;- Поддержка CSV, JSON и текстовых логов&#10;- Автоопределение формата файла&#10;- Chainlit UI с загрузкой файлов&#10;- Адаптивные примеры вопросов под тип данных&#10;- Полностью локальная обработка (данные не покидают машину)&#10;- Автоматический запуск Ollama при необходимости&#10;&#10;Техническая реализация:&#10;- Монолитное приложение в одном файле (app.py)&#10;- Минимальные зависимости (chainlit + requests)&#10;- Модель: qwen2.5:0.5b через Ollama&#10;- Лимит файла: 10MB&#10;- Обработка ошибок с пропуском невалидных строк&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/chainlit_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/chainlit_app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/ollama_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/ollama_client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai-advent/day28/.files/331407b5-a985-4464-bc03-d4c73f048271/84ac5f58-0b55-4bbc-897d-05cfa09e719b.bin" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai-advent/day28/.files/5edee5ca-dc44-4027-9f89-9a3cf238d02b/4625db0d-f90e-4e92-9fd0-933868b41368.bin" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai-advent/day28/.files/a4fef79c-1b1d-4953-b43d-8a9115ac2416/ebd34d8a-b60d-40f0-9cd2-c1257746192b.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai-advent/day28/.files/b561246b-dd3f-4db6-a54a-b07f990535f1/88f74ad9-aea5-42ee-b301-e7f92aa3262f.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai-advent/day28/.files/b561246b-dd3f-4db6-a54a-b07f990535f1/f8266efb-659d-4ec1-8453-85a559c904d9.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai-advent/day28/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/ai-advent/day28/app.py" afterDir="false" />
     </list>
     <list id="618c0d81-fbfa-4771-ac01-b75f6ceae876" name="ридми" comment="AI Advent Challenge 12  mcp server + client" />
     <option name="SHOW_DIALOG" value="false" />
@@ -311,22 +315,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1763985134187</updated>
-    </task>
-    <task id="LOCAL-00047" summary="AI Advent Challenge 12  mcp server + client">
-      <option name="closed" value="true" />
-      <created>1765931833189</created>
-      <option name="number" value="00047" />
-      <option name="presentableId" value="LOCAL-00047" />
-      <option name="project" value="LOCAL" />
-      <updated>1765931833189</updated>
-    </task>
-    <task id="LOCAL-00048" summary="AI Advent Challenge 12  mcp server + client">
-      <option name="closed" value="true" />
-      <created>1765932597074</created>
-      <option name="number" value="00048" />
-      <option name="presentableId" value="LOCAL-00048" />
-      <option name="project" value="LOCAL" />
-      <updated>1765932597074</updated>
     </task>
     <task id="LOCAL-00049" summary="AI Advent Challenge 12  mcp server + client">
       <option name="closed" value="true" />
@@ -704,7 +692,23 @@
       <option name="project" value="LOCAL" />
       <updated>1769009096067</updated>
     </task>
-    <option name="localTasksCounter" value="96" />
+    <task id="LOCAL-00096" summary="AI Advent Challenge 29 - Локальный аналитик данных&#10;&#10;Создано приложение для анализа структурированных данных (CSV, JSON, LOG)&#10;с использованием локальной LLM через Ollama.&#10;&#10;Основные возможности:&#10;- Поддержка CSV, JSON и текстовых логов&#10;- Автоопределение формата файла&#10;- Chainlit UI с загрузкой файлов&#10;- Адаптивные примеры вопросов под тип данных&#10;- Полностью локальная обработка (данные не покидают машину)&#10;- Автоматический запуск Ollama при необходимости&#10;&#10;Техническая реализация:&#10;- Монолитное приложение в одном файле (app.py)&#10;- Минимальные зависимости (chainlit + requests)&#10;- Модель: qwen2.5:0.5b через Ollama&#10;- Лимит файла: 10MB&#10;- Обработка ошибок с пропуском невалидных строк&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;">
+      <option name="closed" value="true" />
+      <created>1769235961573</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1769235961573</updated>
+    </task>
+    <task id="LOCAL-00097" summary="AI Advent Challenge 29 - Локальный аналитик данных&#10;&#10;Создано приложение для анализа структурированных данных (CSV, JSON, LOG)&#10;с использованием локальной LLM через Ollama.&#10;&#10;Основные возможности:&#10;- Поддержка CSV, JSON и текстовых логов&#10;- Автоопределение формата файла&#10;- Chainlit UI с загрузкой файлов&#10;- Адаптивные примеры вопросов под тип данных&#10;- Полностью локальная обработка (данные не покидают машину)&#10;- Автоматический запуск Ollama при необходимости&#10;&#10;Техническая реализация:&#10;- Монолитное приложение в одном файле (app.py)&#10;- Минимальные зависимости (chainlit + requests)&#10;- Модель: qwen2.5:0.5b через Ollama&#10;- Лимит файла: 10MB&#10;- Обработка ошибок с пропуском невалидных строк&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;">
+      <option name="closed" value="true" />
+      <created>1769241055741</created>
+      <option name="number" value="00097" />
+      <option name="presentableId" value="LOCAL-00097" />
+      <option name="project" value="LOCAL" />
+      <updated>1769241055741</updated>
+    </task>
+    <option name="localTasksCounter" value="98" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -744,8 +748,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="AI Advent Challenge 9 –  add history compression and token summary commands" />
-    <MESSAGE value="AI Advent Challenge 10 –  add resume" />
     <MESSAGE value="AI Advent Challenge 11 –  mcp tools reader" />
     <MESSAGE value="ридми" />
     <MESSAGE value="AI Advent Challenge 12  mcp server + client" />
@@ -769,7 +771,9 @@
     <MESSAGE value="AI Advent Challenge 26" />
     <MESSAGE value="AI Advent Challenge 25" />
     <MESSAGE value="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
-    <option name="LAST_COMMIT_MESSAGE" value="AI Advent Challenge 27 - Chainlit + Ollama на удалённом сервере&#10;&#10;Интегрирована локальная LLM модель (gemma2:2b) на удалённый сервер:&#10;- Docker контейнер с Chainlit UI и Ollama backend&#10;- Модель gemma2:2b (1.6GB) для CPU-инференса&#10;- Деплой на сервер 91.229.10.221:8000&#10;- Упрощённый код без истории для стабильности&#10;- Python 3.9 для совместимости с Chainlit 2.3.0&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
+    <MESSAGE value="AI Advent Challenge 28" />
+    <MESSAGE value="AI Advent Challenge 29 - Локальный аналитик данных&#10;&#10;Создано приложение для анализа структурированных данных (CSV, JSON, LOG)&#10;с использованием локальной LLM через Ollama.&#10;&#10;Основные возможности:&#10;- Поддержка CSV, JSON и текстовых логов&#10;- Автоопределение формата файла&#10;- Chainlit UI с загрузкой файлов&#10;- Адаптивные примеры вопросов под тип данных&#10;- Полностью локальная обработка (данные не покидают машину)&#10;- Автоматический запуск Ollama при необходимости&#10;&#10;Техническая реализация:&#10;- Монолитное приложение в одном файле (app.py)&#10;- Минимальные зависимости (chainlit + requests)&#10;- Модель: qwen2.5:0.5b через Ollama&#10;- Лимит файла: 10MB&#10;- Обработка ошибок с пропуском невалидных строк&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
+    <option name="LAST_COMMIT_MESSAGE" value="AI Advent Challenge 29 - Локальный аналитик данных&#10;&#10;Создано приложение для анализа структурированных данных (CSV, JSON, LOG)&#10;с использованием локальной LLM через Ollama.&#10;&#10;Основные возможности:&#10;- Поддержка CSV, JSON и текстовых логов&#10;- Автоопределение формата файла&#10;- Chainlit UI с загрузкой файлов&#10;- Адаптивные примеры вопросов под тип данных&#10;- Полностью локальная обработка (данные не покидают машину)&#10;- Автоматический запуск Ollama при необходимости&#10;&#10;Техническая реализация:&#10;- Монолитное приложение в одном файле (app.py)&#10;- Минимальные зависимости (chainlit + requests)&#10;- Модель: qwen2.5:0.5b через Ollama&#10;- Лимит файла: 10MB&#10;- Обработка ошибок с пропуском невалидных строк&#10;&#10;Co-Authored-By: Claude Sonnet 4.5 &lt;noreply@anthropic.com&gt;" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -1,0 +1,8 @@
+[
+  {"user_id": 1, "action": "login", "timestamp": "2024-01-20T10:00:00"},
+  {"user_id": 2, "action": "purchase", "timestamp": "2024-01-20T10:05:00", "amount": 1500},
+  {"user_id": 1, "action": "view_product", "timestamp": "2024-01-20T10:15:00", "product_id": 42},
+  {"user_id": 3, "action": "login", "timestamp": "2024-01-20T10:20:00"},
+  {"user_id": 2, "action": "logout", "timestamp": "2024-01-20T10:25:00"},
+  {"user_id": 1, "action": "logout", "timestamp": "2024-01-20T10:30:00"}
+]
