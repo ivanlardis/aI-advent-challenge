@@ -27,3 +27,6 @@ Thumbs.db
 
 # Personalization (sensitive user data)
 config/profile.md
+
+# RAG index
+data/faiss_index/
