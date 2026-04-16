@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from lib.openrouter_client import OpenRouterClient, build_messages
 
 # Загружаем переменные окружения
-load_dotenv()
+load_dotenv(override=True)
 
 
 # ========================== ПЕРСОНАЛИЗАЦИЯ ==========================
