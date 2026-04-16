@@ -1,23 +1,7 @@
 # God Agent
 
-Личный AI-помощник, объединяющий все возможности AI Advent Challenge.
+Personal AI assistant powered by Claude 3.5 Sonnet via OpenRouter.
 
-## Возможности
-
-- **Чат** — общение через Claude 3.5 Sonnet (OpenRouter)
-- **RAG** — поиск по базе знаний городов России
-- **Аналитик файлов** — анализ CSV, JSON, LOG файлов
-- **MCP** — интеграция с context7
-
-## Команды
-
-| Команда | Описание |
-|---------|----------|
-| `/compress` | Сжать историю диалога |
-| `/summary` | Статистика токенов |
-| `/rag on\|off` | Включить/выключить RAG |
-| `/mcp` | Показать инструменты MCP |
-
-## Файлы
-
-Перетащите файл в чат для анализа (CSV, JSON, LOG, TXT до 10MB).
+## Commands
+- `/compress` — Сжать историю диалога
+- `/summary` — Статистика токенов
