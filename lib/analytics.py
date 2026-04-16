@@ -1,0 +1,107 @@
+"""Модуль для трекинга использования токенов и статистики."""
+
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+
+
+class Analytics:
+    """Трекинг статистики использования токенов, команд и производительности."""
+
+    @staticmethod
+    def record_usage(
+        user_input: str,
+        response: str,
+        usage_data: Optional[Dict[str, int]] = None,
+        analytics_list: Optional[List[Dict]] = None
+    ) -> List[Dict]:
+        """Записывает статистику использования в список."""
+        if analytics_list is None:
+            analytics_list = []
+
+        if usage_data and isinstance(usage_data, dict):
+            prompt_tokens = usage_data.get("prompt_tokens", len(user_input) // 4)
+            completion_tokens = usage_data.get("completion_tokens", len(response) // 4)
+        else:
+            prompt_tokens = len(user_input) // 4
+            completion_tokens = len(response) // 4
+
+        record = {
+            "timestamp": datetime.now().isoformat(),
+            "user_input_length": len(user_input),
+            "response_length": len(response),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+            "input_preview": user_input[:40] + ("..." if len(user_input) > 40 else ""),
+        }
+
+        analytics_list.append(record)
+        return analytics_list
+
+    @staticmethod
+    def format_dashboard(analytics_list: List[Dict]) -> str:
+        """Формирует дашборд статистики."""
+        if not analytics_list:
+            return "**Дашборд статистики**\n\nПока нет данных. Начните общение!"
+
+        total_tokens = sum(item.get("total_tokens", 0) for item in analytics_list)
+        total_prompt = sum(item.get("prompt_tokens", 0) for item in analytics_list)
+        total_completion = sum(item.get("completion_tokens", 0) for item in analytics_list)
+        message_count = len(analytics_list)
+        avg_tokens = total_tokens // message_count if message_count > 0 else 0
+        longest_msg = max(analytics_list, key=lambda x: x.get("total_tokens", 0))
+
+        lines = [
+            "**Дашборд статистики использования**\n",
+            "",
+            f"**Общая статистика:**",
+            f"- Всего сообщений: `{message_count}`",
+            f"- Всего токенов: `{total_tokens}`",
+            f"  - Входящие (prompt): `{total_prompt}`",
+            f"  - Исходящие (completion): `{total_completion}`",
+            f"- Среднее на сообщение: `{avg_tokens}` токенов",
+            "",
+            f"**Рекорды:**",
+            f"- Самое длинное сообщение: `{longest_msg['total_tokens']}` токенов",
+            f"  - Запрос: {longest_msg['input_preview']}",
+            "",
+            "**Последние 5 сообщений:**",
+            "| # | Запрос | Токены |",
+            "|---|--------|--------|",
+        ]
+
+        recent = analytics_list[-5:]
+        for idx, item in enumerate(reversed(recent), 1):
+            preview = item.get("input_preview", "")
+            tokens = item.get("total_tokens", 0)
+            lines.append(f"| {idx} | {preview} | `{tokens}` |")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def get_stats(analytics_list: List[Dict]) -> Dict[str, Any]:
+        """Возвращает словарь со статистикой для программного использования."""
+        if not analytics_list:
+            return {
+                "message_count": 0,
+                "total_tokens": 0,
+                "total_prompt_tokens": 0,
+                "total_completion_tokens": 0,
+                "avg_tokens": 0,
+                "max_tokens": 0,
+            }
+
+        total_tokens = sum(item.get("total_tokens", 0) for item in analytics_list)
+        total_prompt = sum(item.get("prompt_tokens", 0) for item in analytics_list)
+        total_completion = sum(item.get("completion_tokens", 0) for item in analytics_list)
+        message_count = len(analytics_list)
+        max_tokens = max(item.get("total_tokens", 0) for item in analytics_list)
+
+        return {
+            "message_count": message_count,
+            "total_tokens": total_tokens,
+            "total_prompt_tokens": total_prompt,
+            "total_completion_tokens": total_completion,
+            "avg_tokens": total_tokens // message_count if message_count > 0 else 0,
+            "max_tokens": max_tokens,
+        }

@@ -13,6 +13,7 @@ import chainlit as cl
 from dotenv import load_dotenv
 
 from lib.openrouter_client import OpenRouterClient, build_messages
+from lib.analytics import Analytics
 
 # Загружаем переменные окружения
 load_dotenv(override=True)
@@ -141,6 +142,12 @@ async def handle_summary_command(usage_history: List[Dict]):
     await cl.Message(content="\n".join(lines)).send()
 
 
+async def handle_dashboard_command(analytics_list: List[Dict]):
+    """Выводит дашборд статистики."""
+    dashboard_content = Analytics.format_dashboard(analytics_list)
+    await cl.Message(content=dashboard_content).send()
+
+
 # ========================== CHAINLIT HANDLERS ==========================
 
 @cl.on_chat_start
@@ -163,6 +170,7 @@ async def on_chat_start():
 **Команды:**
 - `/compress` — сжатие истории диалога
 - `/summary` — статистика токенов
+- `/dashboard` — дашборд полной статистики
 
 Чем могу помочь?"""
 
@@ -195,6 +203,10 @@ async def on_message(message: cl.Message):
             await handle_summary_command(usage_history)
             return
 
+        elif cmd == "/dashboard":
+            await handle_dashboard_command(usage_history)
+            return
+
     # Формируем промпт и отправляем запрос
     system_prompt = get_system_prompt()
     messages = build_messages(user_text, history, system_prompt)
@@ -217,11 +229,13 @@ async def on_message(message: cl.Message):
     history.append({"role": "assistant", "content": full_response})
     cl.user_session.set("history", history)
 
-    # Сохраняем статистику (примерная)
-    usage_history.append({
-        "message": user_text[:50],
-        "total": len(user_text) + len(full_response)
-    })
+    # Сохраняем статистику через Analytics
+    usage_history = Analytics.record_usage(
+        user_text,
+        full_response,
+        None,
+        usage_history
+    )
     cl.user_session.set("usage_history", usage_history)
 
 
