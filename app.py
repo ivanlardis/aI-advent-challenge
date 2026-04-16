@@ -4,9 +4,6 @@ God Agent - Личный AI-помощник
 Chainlit + OpenRouter (Claude 3.5 Sonnet)
 """
 
-import os
-import re
-from pathlib import Path
 from typing import List, Dict
 
 import chainlit as cl
@@ -14,38 +11,13 @@ from dotenv import load_dotenv
 
 from lib.openrouter_client import OpenRouterClient, build_messages
 from lib.analytics import Analytics
+from lib.profile import load_profile, extract_name, get_profile_summary
 
 # Загружаем переменные окружения
 load_dotenv(override=True)
 
 
 # ========================== ПЕРСОНАЛИЗАЦИЯ ==========================
-
-def load_profile(profile_path: str = "config/profile.md") -> str:
-    """Загружает профиль пользователя из MD файла."""
-    current_dir = Path(__file__).parent
-    full_path = current_dir / profile_path
-
-    try:
-        with open(full_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            print(f"Профиль загружен: {full_path}")
-            return content
-    except FileNotFoundError:
-        print(f"Профиль не найден: {full_path}")
-        return ""
-    except Exception as e:
-        print(f"Ошибка загрузки профиля: {e}")
-        return ""
-
-
-def extract_name(profile_content: str) -> str:
-    """Извлекает имя пользователя из профиля."""
-    match = re.search(r'- \*\*Имя:\*\*\s*(.+)', profile_content)
-    if match:
-        return match.group(1).strip()
-    return "Пользователь"
-
 
 # Загрузка профиля при старте
 USER_PROFILE = load_profile()
@@ -148,6 +120,19 @@ async def handle_dashboard_command(analytics_list: List[Dict]):
     await cl.Message(content=dashboard_content).send()
 
 
+async def handle_profile_command():
+    """Показывает саммари загруженного профиля."""
+    summary = get_profile_summary(USER_PROFILE)
+    await cl.Message(content=summary).send()
+
+
+async def handle_reset_command():
+    """Сбрасывает историю диалога и аналитику."""
+    cl.user_session.set("history", [])
+    cl.user_session.set("usage_history", [])
+    await cl.Message(content="**Сброшено.** История и статистика очищены.").send()
+
+
 # ========================== CHAINLIT HANDLERS ==========================
 
 @cl.on_chat_start
@@ -171,6 +156,8 @@ async def on_chat_start():
 - `/compress` — сжатие истории диалога
 - `/summary` — статистика токенов
 - `/dashboard` — дашборд полной статистики
+- `/profile` — саммари загруженного профиля
+- `/reset` — очистить историю и статистику
 
 Чем могу помочь?"""
 
@@ -205,6 +192,14 @@ async def on_message(message: cl.Message):
 
         elif cmd == "/dashboard":
             await handle_dashboard_command(usage_history)
+            return
+
+        elif cmd == "/profile":
+            await handle_profile_command()
+            return
+
+        elif cmd == "/reset":
+            await handle_reset_command()
             return
 
     # Формируем промпт и отправляем запрос
