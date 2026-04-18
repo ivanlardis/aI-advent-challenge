@@ -1,0 +1,138 @@
+name: lardis-local
+version: 1.0.0
+schema: v1
+
+# Локальная LLM-конфигурация для PyCharm (Community Edition тоже поддерживается)
+# + Continue.dev + Ollama.
+# Фактический прогон Day 4 делался на моделях, которые уже лежали локально
+# (слабый интернет не дал докачать coder-модели). Целевой набор закомментирован ниже.
+# Параметры для кода: низкая temperature, короткие ответы.
+
+models:
+  - name: Qwen2.5 3B (main chat)
+    provider: ollama
+    model: qwen2.5:3b
+    apiBase: http://localhost:11434
+    roles:
+      - chat
+      - edit
+      - apply
+    defaultCompletionOptions:
+      temperature: 0.2
+      topP: 0.9
+      contextLength: 8192
+      maxTokens: 1024
+    systemMessage: |
+      # lardis — правила проекта (local system prompt)
+
+      Персональный AI-помощник. Chainlit чат-бот + OpenRouter LLM + профиль пользователя.
+
+      ## Стек
+      Python 3.13 · Chainlit · LangChain (ChatOpenAI) · OpenRouter API
+
+      ## Структура
+      - app.py — точка входа: хендлеры, команды, system prompt
+      - lib/openrouter_client.py — OpenRouter клиент (LangChain обёртка)
+      - lib/analytics.py — токен-статистика (через cl.user_session)
+      - lib/profile.py — парсинг профиля
+      - config/profile.md — профиль пользователя (gitignored)
+      - tests/ — pytest юниты + smoke через Playwright MCP
+
+      ## Можно
+      - Добавлять модули в lib/
+      - Добавлять команды /command в app.py
+      - Расширять system prompt
+      - Использовать cl.user_session для состояния сессии
+
+      ## Нельзя
+      - Создавать новые папки верхнего уровня (только lib/, config/, data/, tests/, docs/)
+      - Менять структуру OpenRouterClient (контракт используется везде)
+      - Хранить секреты в коде — только .env
+      - Глобальное mutable-состояние (всё через cl.user_session)
+      - Выдумывать API — если не уверен что метод/декоратор существует, не используй
+      - Эмодзи в коде и строках
+
+      ## Стиль
+      - Docstrings и комментарии на русском
+      - Async для всех хендлеров и клиентских методов
+      - Типизация через typing (List, Dict, Optional)
+
+      ## Паттерн команды
+      В on_message, блок обработки команд:
+        if cmd == "/mycommand":
+            await handle_mycommand(...)
+            return
+
+      ## Антипаттерны (категорически)
+      - analytics = Analytics() на уровне модуля — НЕТ, состояние через cl.user_session
+      - @cl.page() — НЕ существует в Chainlit, не выдумывай декораторы
+      - len(text.split()) как подсчёт токенов — это слова, не токены
+      - Прямой import requests — используй OpenRouterClient
+
+      ## Отвечай
+      Отвечай кратко и по делу на русском. Код — без комментариев если имена говорят сами за себя.
+      Когда предлагаешь код — сразу давай файл с путём и содержимым, без долгих рассуждений.
+
+  - name: Gemma 3 1B
+    provider: ollama
+    model: gemma3:1b
+    apiBase: http://localhost:11434
+    roles:
+      - chat
+    defaultCompletionOptions:
+      temperature: 0.2
+      topP: 0.9
+      contextLength: 4096
+      maxTokens: 512
+    systemMessage: |
+      lardis — Chainlit + OpenRouter. Python 3.13, async, типизация, без эмодзи.
+      Нельзя: новые папки, глобальное mutable состояние, выдуманные Chainlit API (например @cl.page()), import requests.
+      Состояние — через cl.user_session. Отвечай кратко на русском.
+
+  - name: Qwen2.5 0.5B (draft / autocomplete)
+    provider: ollama
+    model: qwen2.5:0.5b
+    apiBase: http://localhost:11434
+    roles:
+      - autocomplete
+    defaultCompletionOptions:
+      temperature: 0.1
+      topP: 0.9
+      contextLength: 2048
+      maxTokens: 128
+
+# ==========================================================================
+# TARGET-конфиг — когда докачаются coder-модели (qwen2.5-coder:14b + 7b + gemma3:12b)
+# Раскомментировать после `ollama pull qwen2.5-coder:14b` и т. п.
+# ==========================================================================
+# models:
+#   - name: Qwen2.5 Coder 14B (main chat)
+#     provider: ollama
+#     model: qwen2.5-coder:14b
+#     roles: [chat, edit, apply]
+#     defaultCompletionOptions: {temperature: 0.2, topP: 0.9, contextLength: 8192, maxTokens: 1024}
+#     systemMessage: <полный CLAUDE.md — см. выше>
+#   - name: Gemma 3 12B
+#     provider: ollama
+#     model: gemma3:12b
+#     roles: [chat, edit]
+#     defaultCompletionOptions: {temperature: 0.2, topP: 0.9, contextLength: 8192, maxTokens: 1024}
+#   - name: Qwen2.5 Coder 7B (fast chat)
+#     provider: ollama
+#     model: qwen2.5-coder:7b
+#     roles: [chat]
+#     defaultCompletionOptions: {temperature: 0.2, topP: 0.9, contextLength: 8192, maxTokens: 1024}
+#   - name: Qwen2.5 Coder 7B Base (FIM autocomplete)
+#     provider: ollama
+#     model: qwen2.5-coder:7b-base
+#     roles: [autocomplete]
+#     defaultCompletionOptions: {temperature: 0.1, topP: 0.9, contextLength: 4096, maxTokens: 256}
+
+context:
+  - provider: code
+  - provider: diff
+  - provider: folder
+  - provider: codebase
+  - provider: file
+  - provider: open
+  - provider: terminal

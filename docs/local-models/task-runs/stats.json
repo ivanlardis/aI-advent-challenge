@@ -1,0 +1,36 @@
+{
+  "task1": {
+    "qwen2.5:3b": {
+      "wall_s": 19.6,
+      "eval_count": 309,
+      "tok_per_s": 119.9
+    },
+    "gemma3:1b": {
+      "wall_s": 487.76,
+      "eval_count": 81920,
+      "tok_per_s": 180.3
+    },
+    "qwen2.5:0.5b": {
+      "wall_s": 1.79,
+      "eval_count": 223,
+      "tok_per_s": 285.0
+    }
+  },
+  "task2": {
+    "qwen2.5:3b": {
+      "wall_s": 6.03,
+      "eval_count": 658,
+      "tok_per_s": 119.8
+    },
+    "gemma3:1b": {
+      "wall_s": 5.15,
+      "eval_count": 839,
+      "tok_per_s": 178.9
+    },
+    "qwen2.5:0.5b": {
+      "wall_s": 1.97,
+      "eval_count": 484,
+      "tok_per_s": 287.3
+    }
+  }
+}
