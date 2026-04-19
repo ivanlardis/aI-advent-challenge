@@ -34,11 +34,26 @@ model: sonnet
    - Если критерий включает "тест зелёный" / "pytest зелёный" — прогнать `pytest tests/` (или указанный файл) и убедиться в зелёном статусе.
    - Если критерий про содержимое файла — `grep` / `Read` для подтверждения.
    - Если acceptance не выполнен с первого раза — **стоп цикла** (лимит попыток = 1 по правилам Day 5), зафиксируй причину в логе.
-5b. **Smoke-импорт app.py.** После любого изменения в `app.py` дополнительно прогнать:
+5b. **AST-проверка декораторов app.py.** После любого изменения в `app.py` проверить, что Chainlit-декораторы на месте. Важно: **обычный smoke-импорт НЕ ловит стёртый декоратор** — функция остаётся в модуле как обычная async-функция, импорт успешный, pytest зелёный, а приложение на прод не стартует (хендлер не зарегистрирован в Chainlit).
    ```
-   source venv/bin/activate && python -c "from app import on_chat_start, on_message, format_help, build_welcome_message"
+   source venv/bin/activate && python - <<'PY'
+   import ast, sys
+   tree = ast.parse(open('app.py').read())
+   deco_by_fn = {}
+   for node in ast.walk(tree):
+       if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+           deco_by_fn[node.name] = [ast.unparse(d) for d in node.decorator_list]
+   required = {
+       'on_chat_start': 'cl.on_chat_start',
+       'on_message':    'cl.on_message',
+   }
+   missing = [fn for fn, dec in required.items() if dec not in deco_by_fn.get(fn, [])]
+   if missing:
+       print('BROKEN decorators missing for:', missing); sys.exit(1)
+   print('app.py decorators OK')
+   PY
    ```
-   Защищает от ситуации «pytest зелёный, но модуль не импортируется» (случайно удалил декоратор / хендлер / import). 200мс, но ловит классы ошибок, которые unit-тесты не видят.
+   Ловит сценарий run-1 T-11 (декоратор `@cl.on_chat_start` стёрт при рефакторинге).
 6. **Коммит.**
    ```
    git add -A
