@@ -14,6 +14,11 @@
       "wall_s": 1.79,
       "eval_count": 223,
       "tok_per_s": 285.0
+    },
+    "gemma4:e4b": {
+      "wall_s": 16.32,
+      "eval_count": 760,
+      "tok_per_s": 66.0
     }
   },
   "task2": {
@@ -31,6 +36,11 @@
       "wall_s": 1.97,
       "eval_count": 484,
       "tok_per_s": 287.3
+    },
+    "gemma4:e4b": {
+      "wall_s": 20.05,
+      "eval_count": 1270,
+      "tok_per_s": 66.6
     }
   }
 }

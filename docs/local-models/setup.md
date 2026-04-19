@@ -4,11 +4,13 @@
 
 > **PyCharm Community работает.** Continue.dev официально поддерживает всю IntelliJ Platform, включая Community Edition — платить за Professional не нужно.
 
-> **Важно про сеть.** Этот прогон (Day 4) делался при слабом интернете, 26 GB целевых coder-моделей не вытянулись. Поэтому фактически гонял 3 уже скачанные модели (`qwen2.5:3b`, `gemma3:1b`, `qwen2.5:0.5b`). Раздел «Target-набор» ниже остаётся планом после апгрейда канала.
+> **История прогонов.**
+> - Первый прогон Day 4 — при слабом интернете, на generalist-моделях ≤3B (`qwen2.5:3b`, `gemma3:1b`, `qwen2.5:0.5b`). Ни одна не справилась.
+> - Апдейт — после апгрейда канала докачана **`gemma4:e4b`** (9.6 GB, Gemma 4 E4B, мобильный edge-стандарт от Google, апрель 2026, multimodal, заявлена как «new standard for local agentic intelligence»). Теперь это основная чат-модель в конфиге. Coder-модели семейства Qwen2.5-Coder решил не качать — Gemma 4 E4B покрывает те же задачи при меньшем размере и более свежем обучении.
 
 ## 1. Ollama
 
-Уже установлена (`/usr/local/bin/ollama`). Проверить:
+Нужна Ollama ≥ 0.20 (для Gemma 4). Проверить:
 
 ```bash
 ollama --version
@@ -16,26 +18,27 @@ ollama serve &      # если ещё не запущена
 ollama list
 ```
 
-## 2. Модели — фактический набор (то, что реально гонялось)
+## 2. Модели — фактический набор
 
 ```bash
-ollama pull qwen2.5:3b        # 1.9 GB — основной чат
-ollama pull gemma3:1b         # 0.8 GB — альтернатива
+ollama pull gemma4:e4b        # 9.6 GB — основной чат (Gemma 4 E4B, edge, multimodal)
+ollama pull qwen2.5:3b        # 1.9 GB — baseline для сравнения
+ollama pull gemma3:1b         # 0.8 GB — альтернатива (плохо себя показала)
 ollama pull qwen2.5:0.5b      # 0.4 GB — быстрый draft / autocomplete
 ```
 
-Итого ~3 GB. Ни одна из них не специализированная coder-модель — это честное ограничение текущего прогона.
+Итого ~13 GB. Gemma 4 E4B — основной чат; остальные три остались для честного сравнения в `comparison.md`.
 
-## 3. Target-набор (когда интернет позволит)
+## 3. Опциональный coder-набор
 
 ```bash
-ollama pull qwen2.5-coder:14b         # ~9 GB   — основной чат (HumanEval 89%)
-ollama pull gemma3:12b                # ~7 GB   — альтернатива
-ollama pull qwen2.5-coder:7b          # ~4.5 GB — быстрый чат
-ollama pull qwen2.5-coder:7b-base     # ~4.5 GB — FIM-автокомплит
+# Раскомментировать если на реальных задачах станет видно, что coder-specialized
+# объективно лучше generalist Gemma 4:
+# ollama pull qwen2.5-coder:7b          # ~4.5 GB — быстрый coder-чат
+# ollama pull qwen2.5-coder:7b-base     # ~4.5 GB — FIM-автокомплит
 ```
 
-После загрузки — раскомментировать секцию TARGET в `.continue/config.yaml`.
+Секция TARGET в `.continue/config.yaml` на эти модели лежит закомментированной.
 
 ## 4. Continue.dev в PyCharm
 
@@ -48,7 +51,7 @@ ollama pull qwen2.5-coder:7b-base     # ~4.5 GB — FIM-автокомплит
 Для всех чат-моделей:
 - `temperature: 0.2` — низкая, детерминированный код
 - `topP: 0.9` — отсечь маловероятные токены
-- `contextLength: 8192` (для 3B), 4096 (для 1B)
+- `contextLength: 16384` (Gemma 4 E4B), 8192 (для 3B), 4096 (для 1B)
 - `maxTokens: 1024` — ответ до 1K токенов
 
 Для автокомплита:
@@ -68,20 +71,21 @@ ollama pull qwen2.5-coder:7b-base     # ~4.5 GB — FIM-автокомплит
 
 ```bash
 curl http://localhost:11434/api/chat -d '{
-  "model": "qwen2.5:3b",
+  "model": "gemma4:e4b",
   "messages": [{"role":"user","content":"Привет"}],
   "stream": false
 }' | python3 -c "import sys,json; print(json.load(sys.stdin)['message']['content'])"
 ```
 
-Должен вернуть короткий осмысленный ответ за 1-3 сек.
+Должен вернуть короткий осмысленный ответ за 1-5 сек.
 
 В PyCharm → Continue → чат → выбрать модель → «Привет, проверка». Ответ за 2-5 сек.
 
 ## 9. Benchmark-прогон (воспроизведение таблиц comparison.md)
 
 ```bash
-python3 docs/local-models/run_benchmark.py
+python3 docs/local-models/run_benchmark.py                  # все модели из MODELS
+python3 docs/local-models/run_benchmark.py gemma4:e4b       # только одна — мерж в stats.json
 ```
 
-Прогоняет 2 задачи (Day 1 фича, Day 2 bug-fix) на всех моделях из `MODELS`, пишет ответы в `docs/local-models/task-runs/<task>-<model>.md` и агрегат в `stats.json`.
+Прогоняет 2 задачи (Day 1 фича, Day 2 bug-fix), пишет ответы в `docs/local-models/task-runs/<task>-<model>.md` и агрегат в `stats.json`. При передаче моделей через argv `stats.json` мержится — можно добавить строку новой модели, не теряя прежние замеры.

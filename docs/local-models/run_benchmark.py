@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""Прогон двух задач (Day 1 фича, Day 2 bug-fix) на всех локальных моделях.
+"""Прогон двух задач (Day 1 фича, Day 2 bug-fix) на локальных моделях.
 
 Отправляет запросы в Ollama HTTP API и сохраняет ответы + замеры времени
 в docs/local-models/task-runs/. Результаты агрегирует в stats.json
 для вставки в comparison.md.
 
 Запуск:
-    python3 docs/local-models/run_benchmark.py
+    python3 docs/local-models/run_benchmark.py                 # все модели из MODELS
+    python3 docs/local-models/run_benchmark.py gemma4:e4b      # только одна
+    python3 docs/local-models/run_benchmark.py m1 m2 ...       # произвольный список
+
+При указании моделей через argv stats.json мержится, а не перезаписывается —
+можно добавить результаты новой модели, не теряя уже прогнанные.
 
 Требует запущенную Ollama (`ollama serve`).
 """
 
 import json
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -19,8 +25,9 @@ from pathlib import Path
 OLLAMA_URL = "http://localhost:11434/api/chat"
 OUT_DIR = Path(__file__).parent / "task-runs"
 OUT_DIR.mkdir(exist_ok=True)
+STATS_PATH = OUT_DIR / "stats.json"
 
-MODELS = ["qwen2.5:3b", "gemma3:1b", "qwen2.5:0.5b"]
+MODELS = ["qwen2.5:3b", "gemma3:1b", "qwen2.5:0.5b", "gemma4:e4b"]
 
 SYSTEM_PROMPT_CHAT = """# lardis — правила проекта
 
@@ -166,8 +173,15 @@ def save(task: str, model: str, out: dict, prompt: str) -> None:
 
 
 def main() -> None:
-    stats = {"task1": {}, "task2": {}}
-    for model in MODELS:
+    argv_models = sys.argv[1:]
+    models = argv_models or MODELS
+
+    if argv_models and STATS_PATH.exists():
+        stats = json.loads(STATS_PATH.read_text(encoding="utf-8"))
+    else:
+        stats = {"task1": {}, "task2": {}}
+
+    for model in models:
         print(f"[{model}] task1 (feature)...", flush=True)
         r1 = ask(model, SYSTEM_PROMPT_CHAT, TASK1_PROMPT)
         save("day1", model, r1, TASK1_PROMPT)
@@ -180,7 +194,7 @@ def main() -> None:
         stats["task2"][model] = {k: v for k, v in r2.items() if k != "content"}
         print(f"  -> {r2['wall_s']}s, {r2['tok_per_s']} tok/s", flush=True)
 
-    (OUT_DIR / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    STATS_PATH.write_text(json.dumps(stats, indent=2), encoding="utf-8")
     print(f"\nСохранено в {OUT_DIR}")
 
 
