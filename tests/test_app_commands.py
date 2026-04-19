@@ -1,5 +1,6 @@
 """Тесты для роутера команд в app.py (unit-уровень, без Chainlit UI)."""
 
+import asyncio
 import importlib
 
 
@@ -34,3 +35,57 @@ def test_non_slash_is_not_command():
     user_input = "привет /dashboard внутри"
     cmd = user_input.strip().split()[0].lower()
     assert not cmd.startswith("/")
+
+
+def test_handle_summary_command_aggregates_total_tokens(monkeypatch):
+    """handle_summary_command должен суммировать 'total_tokens' из usage_history
+    (ключ, который реально пишет Analytics.record_usage)."""
+    app = importlib.import_module("app")
+
+    sent_messages = []
+
+    class FakeMessage:
+        def __init__(self, content=""):
+            self.content = content
+
+        async def send(self):
+            sent_messages.append(self.content)
+
+    monkeypatch.setattr(app.cl, "Message", FakeMessage)
+
+    usage_history = [
+        {"total_tokens": 10, "prompt_tokens": 6, "completion_tokens": 4, "input_preview": "hi"},
+        {"total_tokens": 25, "prompt_tokens": 15, "completion_tokens": 10, "input_preview": "hello"},
+        {"total_tokens": 5, "prompt_tokens": 3, "completion_tokens": 2, "input_preview": "hey"},
+    ]
+
+    asyncio.run(app.handle_summary_command(usage_history))
+
+    assert len(sent_messages) == 1
+    output = sent_messages[0]
+    # Сумма 10 + 25 + 5 = 40
+    assert "40" in output, f"Ожидали суммарные 40 токенов в выводе, получили: {output}"
+    # Отдельные значения тоже должны присутствовать
+    assert "10" in output
+    assert "25" in output
+
+
+def test_handle_summary_command_empty_history(monkeypatch):
+    """При пустой истории должно выводиться сообщение-заглушка, а не падать."""
+    app = importlib.import_module("app")
+
+    sent_messages = []
+
+    class FakeMessage:
+        def __init__(self, content=""):
+            self.content = content
+
+        async def send(self):
+            sent_messages.append(self.content)
+
+    monkeypatch.setattr(app.cl, "Message", FakeMessage)
+
+    asyncio.run(app.handle_summary_command([]))
+
+    assert len(sent_messages) == 1
+    assert "нет данных" in sent_messages[0].lower()

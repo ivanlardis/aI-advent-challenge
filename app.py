@@ -96,7 +96,7 @@ async def handle_summary_command(usage_history: List[Dict]):
         await cl.Message(content="Пока нет данных по токенам.").send()
         return
 
-    total = sum(item.get("total", 0) for item in usage_history)
+    total = sum(item.get("total_tokens", 0) for item in usage_history)
 
     lines = [
         "**Статистика токенов:**\n",
@@ -106,7 +106,7 @@ async def handle_summary_command(usage_history: List[Dict]):
 
     for idx, item in enumerate(usage_history, 1):
         preview = item.get("message", "")[:30]
-        tokens = item.get("total", 0)
+        tokens = item.get("total_tokens", 0)
         lines.append(f"| {idx} | {preview}... | {tokens} |")
 
     lines.append(f"\n**Всего:** {total} токенов")
