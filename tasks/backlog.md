@@ -28,7 +28,7 @@
 
 ## Test (3)
 
-- [ ] T-13 | test | Добавить тест `test_trim_keeps_system_when_max_tokens_zero` в `tests/test_history.py` — проверяет, что `trim_history` с `max_tokens=0` сохраняет сообщения роли `"system"` и удаляет остальное. — **Acceptance:** тест написан; `pytest tests/test_history.py -v` зелёный.
+- [x] T-13 | test | Добавить тест `test_trim_keeps_system_when_max_tokens_zero` в `tests/test_history.py` — проверяет, что `trim_history` с `max_tokens=0` сохраняет сообщения роли `"system"` и удаляет остальное. — **Acceptance:** тест написан; `pytest tests/test_history.py -v` зелёный.
 - [ ] T-14 | test | В `tests/test_analytics.py` добавить тест `test_get_stats_empty_list` — `Analytics.get_stats([])` возвращает словарь с `message_count=0` и `total_tokens=0`. Если похожий тест уже есть — зафиксировать acceptance как "выполнено, тест существует". — **Acceptance:** тест существует и зелёный.
 - [ ] T-15 | test | В `tests/test_profile.py` добавить тест `test_extract_name_empty_profile` — `extract_name("")` возвращает `"Пользователь"`. — **Acceptance:** тест написан; `pytest tests/test_profile.py -v` зелёный.
 

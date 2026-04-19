@@ -68,10 +68,15 @@ def test_format_dashboard_shows_avg_response_length():
     assert "150" in out
 
 
-def test_get_stats_empty():
+def test_get_stats_empty_list_returns_zeros():
+    """get_stats([]) возвращает dict со всеми нулевыми полями (не падает, не KeyError)."""
     stats = Analytics.get_stats([])
     assert stats["message_count"] == 0
     assert stats["total_tokens"] == 0
+    assert stats["total_prompt_tokens"] == 0
+    assert stats["total_completion_tokens"] == 0
+    assert stats["avg_tokens"] == 0
+    assert stats["max_tokens"] == 0
 
 
 def test_get_stats_aggregates():

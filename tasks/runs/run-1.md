@@ -21,3 +21,4 @@
 | T-10 | refactor | 09:17:38 | 09:18:36 | 0m 58s | OK | cc9a2ef | main agent, dict-роутинг (/compress — особый случай), 40 passed |
 | T-11 | refactor | 09:19:27 | 09:20:58 | 1m 31s | OK | 01f5107 | main agent, build_welcome_message, +2 теста, 42 passed. **Близко к падению:** случайно удалил декоратор `on_chat_start`, заметил при следующей проверке и восстановил. Знак — что Main Agent при рефакторинге режет лишнее. |
 | T-12 | refactor | 09:21:47 | 09:22:30 | 0m 43s | OK | 25a601e | main agent, extend(history), 42 passed |
+| T-13 | test | 09:23:11 | 09:23:46 | 0m 35s | OK | 77aa214 | main agent, +1 тест trim при max_tokens=0, 43 passed |
