@@ -24,3 +24,4 @@
 | T-13 | test | 09:23:11 | 09:23:46 | 0m 35s | OK | 77aa214 | main agent, +1 тест trim при max_tokens=0, 43 passed |
 | T-14 | test | 09:24:27 | 09:25:11 | 0m 44s | OK | 287cbb3 | main agent, тест уже был, усилил до всех нулевых полей, 43 passed |
 | T-15 | test | 09:25:49 | 09:26:47 | 0m 58s | OK | 89c8fb6 | main agent, +acceptance-тест + whitespace edge, 45 passed |
+| T-16 | doc | 09:27:23 | 09:27:53 | 0m 30s | OK | 7483776 | main agent, docstring estimate_tokens, 45 passed |
