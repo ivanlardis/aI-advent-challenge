@@ -5,7 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c6eebe40-b61b-4d10-b460-39d23f1788e7" name="Changes" comment="AI Advent Challenge 32 - God Agent">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/openrouter_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/lib/openrouter_client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tasks/backlog.md" beforeDir="false" afterPath="$PROJECT_DIR$/tasks/backlog.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tasks/runs/run-1.md" beforeDir="false" afterPath="$PROJECT_DIR$/tasks/runs/run-1.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_openrouter_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_openrouter_client.py" afterDir="false" />
     </list>
     <list id="618c0d81-fbfa-4771-ac01-b75f6ceae876" name="ридми" comment="AI Advent Challenge 12  mcp server + client" />
     <option name="SHOW_DIALOG" value="false" />
@@ -107,7 +110,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "loop-run-1",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/ivanlardis/IdeaProjects/lardis/build.gradle.kts",
     "nodejs_package_manager_path": "npm",

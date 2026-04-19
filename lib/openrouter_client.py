@@ -46,7 +46,7 @@ class OpenRouterClient:
             else:
                 lc_messages.append(HumanMessage(content=content))
 
-        response = await self.llm.ainvoke(lc_messages)
+        response = await self.llm.bind(temperature=temperature).ainvoke(lc_messages)
 
         return {
             "choices": [{"message": {"content": response.content}}],
@@ -81,7 +81,7 @@ class OpenRouterClient:
             else:
                 lc_messages.append(HumanMessage(content=content))
 
-        async for chunk in self.llm.astream(lc_messages):
+        async for chunk in self.llm.bind(temperature=temperature).astream(lc_messages):
             if hasattr(chunk, "content") and chunk.content:
                 yield chunk.content
 
