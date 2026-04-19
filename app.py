@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from lib.openrouter_client import OpenRouterClient, build_messages
 from lib.analytics import Analytics
-from lib.profile import load_profile, extract_name, get_profile_summary
+from lib.profile import load_profile, extract_name, get_profile_summary, truncate_preview
 
 # Загружаем переменные окружения
 load_dotenv(override=True)
@@ -61,7 +61,7 @@ async def handle_compress_command(client: OpenRouterClient, history: List[Dict])
     formatted = []
     for idx, item in enumerate(history, 1):
         role = "Пользователь" if item["role"] == "user" else "Ассистент"
-        formatted.append(f"{idx}. {role}: {item['content'][:200]}")
+        formatted.append(f"{idx}. {role}: {truncate_preview(item['content'])}")
 
     compression_prompt = (
         "Сделай краткую сводку диалога ниже в 5-7 предложений. "

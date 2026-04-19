@@ -5,6 +5,16 @@ from pathlib import Path
 from typing import List, Optional
 
 
+def truncate_preview(text: str, limit: int = 200) -> str:
+    """Обрезает текст до ``limit`` символов и добавляет ``...`` если был срез.
+
+    Если длина ``text`` не превышает ``limit`` — возвращает исходную строку без суффикса.
+    """
+    if len(text) > limit:
+        return text[:limit] + "..."
+    return text
+
+
 def load_profile(profile_path: str = "config/profile.md", base_dir: Optional[Path] = None) -> str:
     """Загружает профиль пользователя из MD файла. Возвращает пустую строку если нет."""
     if base_dir is None:

@@ -7,6 +7,7 @@ from lib.profile import (
     extract_name,
     list_sections,
     get_profile_summary,
+    truncate_preview,
 )
 
 
@@ -50,6 +51,18 @@ def test_list_sections_finds_h2():
 def test_get_profile_summary_empty():
     out = get_profile_summary("")
     assert "не загружен" in out.lower()
+
+
+def test_truncate_preview_short_text_no_suffix():
+    assert truncate_preview("abc", 200) == "abc"
+
+
+def test_truncate_preview_long_text_gets_ellipsis():
+    assert truncate_preview("a" * 250, 200) == "a" * 200 + "..."
+
+
+def test_truncate_preview_exact_limit_no_suffix():
+    assert truncate_preview("a" * 200, 200) == "a" * 200
 
 
 def test_get_profile_summary_has_name_and_sections():
