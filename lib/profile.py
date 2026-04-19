@@ -25,7 +25,9 @@ def extract_name(profile_content: str) -> str:
         return "Пользователь"
     match = re.search(r"- \*\*Имя:\*\*\s*(.+)", profile_content)
     if match:
-        return match.group(1).strip()
+        name = match.group(1).strip()
+        if name:
+            return name
     return "Пользователь"
 
 

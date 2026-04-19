@@ -10,3 +10,4 @@
 | ID | тип | start | end | dur | result | commit | заметки |
 |----|-----|-------|-----|-----|--------|--------|---------|
 | T-01 | bug | 08:58:32 | 09:00:24 | 1m 52s | OK | 8e138d1 | subagent bug-fix, +2 теста, 30 passed |
+| T-02 | bug | 09:01:09 | 09:03:33 | 2m 24s | OK | c54a0bc | subagent bug-fix, `.bind(temperature=...)`, +3 теста, 33 passed |

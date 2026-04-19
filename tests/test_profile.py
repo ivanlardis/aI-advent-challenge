@@ -34,6 +34,10 @@ def test_extract_name_empty_input():
     assert extract_name("") == "Пользователь"
 
 
+def test_extract_name_empty_value():
+    assert extract_name("- **Имя:** \n") == "Пользователь"
+
+
 def test_list_sections_empty():
     assert list_sections("") == []
 
