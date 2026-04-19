@@ -27,8 +27,19 @@ def test_app_module_exposes_command_handlers():
         "handle_dashboard_command",
         "handle_profile_command",
         "handle_reset_command",
+        "handle_help_command",
+        "format_help",
     ):
         assert hasattr(app, name), f"app.py должен экспортировать {name}"
+
+
+def test_format_help_contains_all_commands():
+    """format_help() должен перечислить все команды проекта."""
+    import importlib
+    app = importlib.import_module("app")
+    help_text = app.format_help()
+    for cmd in ("/help", "/compress", "/summary", "/dashboard", "/profile", "/reset"):
+        assert cmd in help_text, f"В справке нет {cmd}"
 
 
 def test_non_slash_is_not_command():

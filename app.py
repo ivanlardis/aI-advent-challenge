@@ -133,6 +133,26 @@ async def handle_reset_command():
     await cl.Message(content="**Сброшено.** История и статистика очищены.").send()
 
 
+def format_help() -> str:
+    """Формирует справку по командам в виде markdown-таблицы."""
+    return (
+        "**Команды God Agent**\n\n"
+        "| Команда | Что делает |\n"
+        "|---------|------------|\n"
+        "| `/help` | показать эту справку |\n"
+        "| `/compress` | сжать историю диалога |\n"
+        "| `/summary` | статистика токенов |\n"
+        "| `/dashboard` | дашборд полной статистики |\n"
+        "| `/profile` | саммари загруженного профиля |\n"
+        "| `/reset` | очистить историю и статистику |\n"
+    )
+
+
+async def handle_help_command():
+    """Выводит справку по командам."""
+    await cl.Message(content=format_help()).send()
+
+
 # ========================== CHAINLIT HANDLERS ==========================
 
 @cl.on_chat_start
@@ -153,6 +173,7 @@ async def on_chat_start():
     welcome = f"""{greeting}Я — **God Agent**, твой личный AI-помощник.
 
 **Команды:**
+- `/help` — справка по всем командам
 - `/compress` — сжатие истории диалога
 - `/summary` — статистика токенов
 - `/dashboard` — дашборд полной статистики
@@ -181,7 +202,11 @@ async def on_message(message: cl.Message):
     if user_text.startswith("/"):
         cmd = user_text.split()[0].lower()
 
-        if cmd == "/compress":
+        if cmd == "/help":
+            await handle_help_command()
+            return
+
+        elif cmd == "/compress":
             new_history = await handle_compress_command(client, history)
             cl.user_session.set("history", new_history)
             return
