@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 from typing import List, Optional
 
+DEFAULT_USER_NAME = "Пользователь"
+
 
 def truncate_preview(text: str, limit: int = 200) -> str:
     """Обрезает текст до ``limit`` символов и добавляет ``...`` если был срез.
@@ -32,13 +34,13 @@ def load_profile(profile_path: str = "config/profile.md", base_dir: Optional[Pat
 def extract_name(profile_content: str) -> str:
     """Извлекает имя пользователя из профиля (строка `- **Имя:** <имя>`)."""
     if not profile_content:
-        return "Пользователь"
+        return DEFAULT_USER_NAME
     match = re.search(r"- \*\*Имя:\*\*\s*(.+)", profile_content)
     if match:
         name = match.group(1).strip()
         if name:
             return name
-    return "Пользователь"
+    return DEFAULT_USER_NAME
 
 
 def list_sections(profile_content: str) -> List[str]:
