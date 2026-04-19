@@ -190,6 +190,11 @@ Chainlit поднят на `localhost:8000`, Playwright MCP протыкивае
 - `docs/local-models/setup.md` / `comparison.md` / `recommendation.md` — переписаны под новую основу.
 - Coder-секция Qwen2.5-Coder оставлена закомментированной в конфиге — на случай если на реальных задачах станет видно, что coder-specialized объективно лучше. Сейчас — не лучше.
 
+**Две IDE-интеграции проверены:**
+- **Continue.dev** — основной вариант, конфиг в репо (`.continue/config.yaml`), `CLAUDE.md` в `systemMessage`, контекст-провайдеры (`@file`, `@folder`, `@codebase`).
+- **JetBrains AI Assistant** (PyCharm 2024.3+, Android Studio через marketplace-плагин) — нативная поддержка Ollama, путь `Settings → Tools → AI Assistant → Providers & API keys → Third-party AI providers → Ollama`, URL `http://localhost:11434`. Подписка AI Pro не требуется для локальных моделей. Контекст по умолчанию 64K. Из ограничений: autocomplete и MCP tool-calling на локальной модели не работают — только Chat и in-editor generation.
+- Выбор: Continue.dev если важен версионируемый конфиг в репо; JetBrains AI Assistant если хочется меньше сторонних плагинов.
+
 **Результаты прогона на тех же двух задачах:**
 
 | Задача | Gemma 4 E4B | qwen2.5:3b | Claude 3.5 Sonnet |
