@@ -36,12 +36,23 @@ config/profile.example.md     # Шаблон профиля
 - Без эмодзи в коде и строках
 
 ### Паттерн добавления команды
+
+Роутинг реализован через dict `simple_commands` внутри `on_message`:
 ```python
-# В on_message, блок обработки команд:
-if cmd == "/mycommand":
-    await handle_mycommand(...)
+# В on_message:
+simple_commands = {
+    "/mycommand": (handle_mycommand, ()),              # без аргументов
+    "/stats":     (handle_stats, (usage_history,)),    # с аргументами
+}
+if cmd in simple_commands:
+    handler, args = simple_commands[cmd]
+    await handler(*args)
     return
 ```
+
+`/compress` — особый случай: он мутирует history в сессии, обрабатывается отдельной веткой до dict-а. Алиасы (например `/clear` → `handle_reset_command`) делаются добавлением ещё одного ключа в dict.
+
+Полный справочник команд — `docs/commands.md`.
 
 ### Антипаттерны
 - `analytics = Analytics()` на уровне модуля — НЕТ, состояние через `cl.user_session`
