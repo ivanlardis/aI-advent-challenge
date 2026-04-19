@@ -42,3 +42,19 @@ def test_estimate_tokens_returns_word_count_approximately():
     assert estimate_tokens("hello world") <= 3, (
         "Два слова должны давать не больше ~3 токенов"
     )
+
+
+def test_trim_keeps_system_when_max_tokens_zero():
+    """При max_tokens=0 system сохраняется, остальное вычищается."""
+    messages = [
+        {"role": "system", "content": "sys prompt"},
+        {"role": "user", "content": "u1"},
+        {"role": "assistant", "content": "a1"},
+        {"role": "user", "content": "u2"},
+    ]
+
+    result = trim_history(messages, max_tokens=0)
+
+    assert [m["role"] for m in result] == ["system"], (
+        f"При max_tokens=0 должен остаться только system. Получили: {result}"
+    )
