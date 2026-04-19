@@ -17,3 +17,4 @@
 | T-06 | feature | 09:10:35 | 09:11:31 | 0m 56s | OK | b15d098 | main agent, `/version` от OPENROUTER_MODEL, 38 passed |
 | T-07 | feature | 09:12:05 | 09:13:20 | 1m 15s | OK | 4ab0f0b | main agent, avg_response_length в dashboard, +1 тест, 39 passed |
 | T-08 | feature | 09:14:00 | 09:14:52 | 0m 52s | OK | 12791e0 | main agent, `/clear` как алиас `/reset`, +1 тест, 40 passed |
+| T-09 | refactor | 09:15:29 | 09:17:00 | 1m 31s | OK | 8c38809 | main agent, DEFAULT_USER_NAME, 40 passed |

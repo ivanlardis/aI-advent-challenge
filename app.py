@@ -210,33 +210,26 @@ async def on_message(message: cl.Message):
     if user_text.startswith("/"):
         cmd = user_text.split()[0].lower()
 
-        if cmd == "/help":
-            await handle_help_command()
-            return
-
-        elif cmd == "/version":
-            await handle_version_command()
-            return
-
-        elif cmd == "/compress":
+        # /compress — особый случай: нужен client и мутация history в сессии.
+        if cmd == "/compress":
             new_history = await handle_compress_command(client, history)
             cl.user_session.set("history", new_history)
             return
 
-        elif cmd == "/summary":
-            await handle_summary_command(usage_history)
-            return
+        # Остальные команды роутим через dict: cmd -> (handler, аргументы).
+        simple_commands = {
+            "/help": (handle_help_command, ()),
+            "/version": (handle_version_command, ()),
+            "/summary": (handle_summary_command, (usage_history,)),
+            "/dashboard": (handle_dashboard_command, (usage_history,)),
+            "/profile": (handle_profile_command, ()),
+            "/reset": (handle_reset_command, ()),
+            "/clear": (handle_reset_command, ()),
+        }
 
-        elif cmd == "/dashboard":
-            await handle_dashboard_command(usage_history)
-            return
-
-        elif cmd == "/profile":
-            await handle_profile_command()
-            return
-
-        elif cmd in ("/reset", "/clear"):
-            await handle_reset_command()
+        if cmd in simple_commands:
+            handler, args = simple_commands[cmd]
+            await handler(*args)
             return
 
     # Формируем промпт и отправляем запрос

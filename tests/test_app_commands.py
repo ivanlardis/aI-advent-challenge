@@ -50,15 +50,15 @@ def test_non_slash_is_not_command():
 
 
 def test_clear_is_alias_for_reset():
-    """Команды /clear и /reset обе распарсятся и попадут в один хендлер."""
+    """Команды /clear и /reset обе распарсятся и уйдут в один хендлер."""
     import importlib
     import inspect
 
     app = importlib.import_module("app")
     source = inspect.getsource(app.on_message)
     assert "/clear" in source, "В роутере должна быть обработка /clear"
-    assert '("/reset", "/clear")' in source or '"/clear", "/reset"' in source, \
-        "/clear должен маршрутизироваться в ту же ветку, что и /reset"
+    assert source.count("handle_reset_command") >= 2, \
+        "/clear должен маршрутизироваться в тот же handle_reset_command, что и /reset"
 
 
 def test_handle_summary_command_aggregates_total_tokens(monkeypatch):
