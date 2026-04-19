@@ -22,7 +22,7 @@
 ## Refactor (4)
 
 - [x] T-09 | refactor | Вынести константу `DEFAULT_USER_NAME = "Пользователь"` в `lib/profile.py` на уровень модуля. Заменить все литералы `"Пользователь"` в этом модуле на константу. — **Acceptance:** константа объявлена; литералов в теле модуля не осталось; существующие тесты зелёные.
-- [ ] T-10 | refactor | В `app.py` роутинг команд через dict: `COMMANDS = {"/compress": handle_compress_command, "/summary": handle_summary_command, ...}` вместо каскада `if/elif`. — **Acceptance:** dict создан на уровне модуля; ветка команд в `on_message` использует `if cmd in COMMANDS: await COMMANDS[cmd](...)`; поведение не изменилось; `pytest tests/` зелёный.
+- [x] T-10 | refactor | В `app.py` роутинг команд через dict: `COMMANDS = {"/compress": handle_compress_command, "/summary": handle_summary_command, ...}` вместо каскада `if/elif`. — **Acceptance:** dict создан на уровне модуля; ветка команд в `on_message` использует `if cmd in COMMANDS: await COMMANDS[cmd](...)`; поведение не изменилось; `pytest tests/` зелёный.
 - [ ] T-11 | refactor | Вынести welcome-текст из `on_chat_start` в функцию `build_welcome_message(user_name: str, profile_loaded: bool) -> str` в `app.py` или в `lib/welcome.py`. — **Acceptance:** функция существует, юнит-тест на неё (без вызова Chainlit); `on_chat_start` использует её.
 - [ ] T-12 | refactor | В `lib/openrouter_client.py:build_messages` упростить сборку списка: заменить `for item in history: messages.append(item)` на `messages.extend(history)`. — **Acceptance:** замена выполнена, существующие тесты зелёные.
 

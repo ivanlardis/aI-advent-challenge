@@ -34,6 +34,23 @@ def test_app_module_exposes_command_handlers():
         assert hasattr(app, name), f"app.py должен экспортировать {name}"
 
 
+def test_build_welcome_message_with_profile():
+    import importlib
+    app = importlib.import_module("app")
+    out = app.build_welcome_message("Иван", profile_loaded=True)
+    assert "Иван" in out
+    assert "God Agent" in out
+    assert "/help" in out
+
+
+def test_build_welcome_message_without_profile():
+    import importlib
+    app = importlib.import_module("app")
+    out = app.build_welcome_message("Пользователь", profile_loaded=False)
+    assert "Привет! " in out
+    assert "Иван" not in out
+
+
 def test_format_help_contains_all_commands():
     """format_help() должен перечислить все команды проекта."""
     import importlib

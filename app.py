@@ -161,6 +161,22 @@ async def handle_version_command():
     await cl.Message(content=f"**Модель:** `{model}`").send()
 
 
+def build_welcome_message(user_name: str, profile_loaded: bool) -> str:
+    """Формирует приветственное сообщение для on_chat_start."""
+    greeting = f"Привет, **{user_name}**! " if profile_loaded else "Привет! "
+    return f"""{greeting}Я — **God Agent**, твой личный AI-помощник.
+
+**Команды:**
+- `/help` — справка по всем командам
+- `/compress` — сжатие истории диалога
+- `/summary` — статистика токенов
+- `/dashboard` — дашборд полной статистики
+- `/profile` — саммари загруженного профиля
+- `/reset` — очистить историю и статистику
+
+Чем могу помочь?"""
+
+
 # ========================== CHAINLIT HANDLERS ==========================
 
 @cl.on_chat_start
@@ -176,20 +192,7 @@ async def on_chat_start():
     cl.user_session.set("history", [])
     cl.user_session.set("usage_history", [])
 
-    greeting = f"Привет, **{USER_NAME}**! " if USER_PROFILE else "Привет! "
-
-    welcome = f"""{greeting}Я — **God Agent**, твой личный AI-помощник.
-
-**Команды:**
-- `/help` — справка по всем командам
-- `/compress` — сжатие истории диалога
-- `/summary` — статистика токенов
-- `/dashboard` — дашборд полной статистики
-- `/profile` — саммари загруженного профиля
-- `/reset` — очистить историю и статистику
-
-Чем могу помочь?"""
-
+    welcome = build_welcome_message(USER_NAME, bool(USER_PROFILE))
     await cl.Message(content=welcome).send()
 
 
