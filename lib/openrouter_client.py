@@ -97,9 +97,7 @@ def build_messages(
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
-    for item in history:
-        messages.append(item)
-
+    messages.extend(history)
     messages.append({"role": "user", "content": user_input})
 
     return messages
