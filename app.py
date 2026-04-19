@@ -153,6 +153,13 @@ async def handle_help_command():
     await cl.Message(content=format_help()).send()
 
 
+async def handle_version_command():
+    """Возвращает имя модели из OPENROUTER_MODEL (fallback: anthropic/claude-3.5-sonnet)."""
+    import os
+    model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+    await cl.Message(content=f"**Модель:** `{model}`").send()
+
+
 # ========================== CHAINLIT HANDLERS ==========================
 
 @cl.on_chat_start
@@ -204,6 +211,10 @@ async def on_message(message: cl.Message):
 
         if cmd == "/help":
             await handle_help_command()
+            return
+
+        elif cmd == "/version":
+            await handle_version_command()
             return
 
         elif cmd == "/compress":

@@ -13,3 +13,4 @@
 | T-02 | bug | 09:01:09 | 09:03:33 | 2m 24s | OK | c54a0bc | subagent bug-fix, `.bind(temperature=...)`, +3 теста, 33 passed |
 | T-03 | bug | 09:04:10 | 09:05:21 | 1m 11s | OK | 9a67020 | subagent bug-fix, +1 тест, 34 passed |
 | T-04 | bug | 09:05:57 | 09:07:38 | 1m 41s | OK | 6d08487 | subagent bug-fix, helper `truncate_preview`, +3 теста, 37 passed |
+| T-05 | feature | 09:08:21 | 09:09:57 | 1m 36s | OK | e2909e1 | main agent, `/help` + `format_help`, +1 тест, 38 passed |

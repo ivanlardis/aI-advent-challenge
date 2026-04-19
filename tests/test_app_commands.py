@@ -29,6 +29,7 @@ def test_app_module_exposes_command_handlers():
         "handle_reset_command",
         "handle_help_command",
         "format_help",
+        "handle_version_command",
     ):
         assert hasattr(app, name), f"app.py должен экспортировать {name}"
 
