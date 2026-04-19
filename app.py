@@ -145,6 +145,7 @@ def format_help() -> str:
         "| `/dashboard` | дашборд полной статистики |\n"
         "| `/profile` | саммари загруженного профиля |\n"
         "| `/reset` | очистить историю и статистику |\n"
+        "| `/clear` | алиас для `/reset` |\n"
     )
 
 
@@ -234,7 +235,7 @@ async def on_message(message: cl.Message):
             await handle_profile_command()
             return
 
-        elif cmd == "/reset":
+        elif cmd in ("/reset", "/clear"):
             await handle_reset_command()
             return
 
