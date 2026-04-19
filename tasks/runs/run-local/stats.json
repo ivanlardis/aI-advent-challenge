@@ -1,0 +1,113 @@
+{
+  "model": "gemma4:e4b",
+  "tasks": {
+    "T-01": {
+      "type": "bug",
+      "wall_s": 126.16,
+      "eval_count": 6081,
+      "tok_per_s": 55.0
+    },
+    "T-02": {
+      "type": "bug",
+      "wall_s": 122.11,
+      "eval_count": 5616,
+      "tok_per_s": 51.4
+    },
+    "T-03": {
+      "type": "bug",
+      "wall_s": 45.52,
+      "eval_count": 1801,
+      "tok_per_s": 53.0
+    },
+    "T-04": {
+      "type": "bug",
+      "wall_s": 79.65,
+      "eval_count": 3560,
+      "tok_per_s": 52.4
+    },
+    "T-05": {
+      "type": "feature",
+      "wall_s": 57.9,
+      "eval_count": 2542,
+      "tok_per_s": 54.2
+    },
+    "T-06": {
+      "type": "feature",
+      "wall_s": 73.27,
+      "eval_count": 3281,
+      "tok_per_s": 52.8
+    },
+    "T-07": {
+      "type": "feature",
+      "wall_s": 68.76,
+      "eval_count": 3054,
+      "tok_per_s": 53.1
+    },
+    "T-08": {
+      "type": "feature",
+      "wall_s": 84.53,
+      "eval_count": 3951,
+      "tok_per_s": 54.0
+    },
+    "T-09": {
+      "type": "refactor",
+      "wall_s": 44.07,
+      "eval_count": 1861,
+      "tok_per_s": 55.8
+    },
+    "T-10": {
+      "type": "refactor",
+      "wall_s": 110.26,
+      "eval_count": 5304,
+      "tok_per_s": 53.8
+    },
+    "T-11": {
+      "type": "refactor",
+      "wall_s": 167.39,
+      "eval_count": 8260,
+      "tok_per_s": 53.2
+    },
+    "T-12": {
+      "type": "refactor",
+      "wall_s": 45.8,
+      "eval_count": 1997,
+      "tok_per_s": 56.6
+    },
+    "T-13": {
+      "type": "test",
+      "wall_s": 36.86,
+      "eval_count": 1468,
+      "tok_per_s": 56.0
+    },
+    "T-14": {
+      "type": "test",
+      "wall_s": 39.37,
+      "eval_count": 1625,
+      "tok_per_s": 56.6
+    },
+    "T-15": {
+      "type": "test",
+      "wall_s": 47.53,
+      "eval_count": 2080,
+      "tok_per_s": 56.4
+    },
+    "T-16": {
+      "type": "doc",
+      "wall_s": 19.46,
+      "eval_count": 512,
+      "tok_per_s": 55.3
+    },
+    "T-17": {
+      "type": "doc",
+      "wall_s": 30.23,
+      "eval_count": 632,
+      "tok_per_s": 39.2
+    },
+    "T-18": {
+      "type": "doc",
+      "wall_s": 117.42,
+      "eval_count": 3914,
+      "tok_per_s": 38.4
+    }
+  }
+}
