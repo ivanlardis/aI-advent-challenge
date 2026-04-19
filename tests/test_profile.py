@@ -39,6 +39,16 @@ def test_extract_name_empty_value():
     assert extract_name("- **Имя:** \n") == "Пользователь"
 
 
+def test_extract_name_empty_profile_acceptance():
+    """Явный acceptance-тест T-15: пустой профиль → 'Пользователь'."""
+    assert extract_name("") == "Пользователь"
+
+
+def test_extract_name_whitespace_only_value():
+    """Значение из одних пробелов/табов также даёт fallback."""
+    assert extract_name("- **Имя:**     \t  \n") == "Пользователь"
+
+
 def test_list_sections_empty():
     assert list_sections("") == []
 
