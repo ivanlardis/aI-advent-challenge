@@ -47,8 +47,10 @@ class Analytics:
         total_tokens = sum(item.get("total_tokens", 0) for item in analytics_list)
         total_prompt = sum(item.get("prompt_tokens", 0) for item in analytics_list)
         total_completion = sum(item.get("completion_tokens", 0) for item in analytics_list)
+        total_response_length = sum(item.get("response_length", 0) for item in analytics_list)
         message_count = len(analytics_list)
         avg_tokens = total_tokens // message_count if message_count > 0 else 0
+        avg_response_length = total_response_length // message_count if message_count > 0 else 0
         longest_msg = max(analytics_list, key=lambda x: x.get("total_tokens", 0))
 
         lines = [
@@ -60,6 +62,7 @@ class Analytics:
             f"  - Входящие (prompt): `{total_prompt}`",
             f"  - Исходящие (completion): `{total_completion}`",
             f"- Среднее на сообщение: `{avg_tokens}` токенов",
+            f"- Средняя длина ответа (символов): `{avg_response_length}`",
             "",
             f"**Рекорды:**",
             f"- Самое длинное сообщение: `{longest_msg['total_tokens']}` токенов",

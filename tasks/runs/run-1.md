@@ -14,3 +14,4 @@
 | T-03 | bug | 09:04:10 | 09:05:21 | 1m 11s | OK | 9a67020 | subagent bug-fix, +1 тест, 34 passed |
 | T-04 | bug | 09:05:57 | 09:07:38 | 1m 41s | OK | 6d08487 | subagent bug-fix, helper `truncate_preview`, +3 теста, 37 passed |
 | T-05 | feature | 09:08:21 | 09:09:57 | 1m 36s | OK | e2909e1 | main agent, `/help` + `format_help`, +1 тест, 38 passed |
+| T-06 | feature | 09:10:35 | 09:11:31 | 0m 56s | OK | b15d098 | main agent, `/version` от OPENROUTER_MODEL, 38 passed |

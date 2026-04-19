@@ -15,7 +15,7 @@
 ## Feature (4)
 
 - [x] T-05 | feature | Команда `/help` — выводит список всех команд в виде таблицы (markdown). Должна работать в любой момент после `on_chat_start`. — **Acceptance:** команда зарегистрирована в `on_message`; хендлер `handle_help_command` в `app.py`; в welcome-сообщении `/help` упомянут; тест в `test_app_commands.py` проверяет факт экспорта хендлера.
-- [ ] T-06 | feature | Команда `/version` — возвращает имя модели из переменной окружения `OPENROUTER_MODEL` (fallback: `anthropic/claude-3.5-sonnet`). — **Acceptance:** `/version` отвечает `Модель: <имя>` через `cl.Message`; хендлер `handle_version_command`; тест на факт экспорта.
+- [x] T-06 | feature | Команда `/version` — возвращает имя модели из переменной окружения `OPENROUTER_MODEL` (fallback: `anthropic/claude-3.5-sonnet`). — **Acceptance:** `/version` отвечает `Модель: <имя>` через `cl.Message`; хендлер `handle_version_command`; тест на факт экспорта.
 - [ ] T-07 | feature | В `Analytics.format_dashboard` добавить строку "Средняя длина ответа (символов): `<число>`" после "Среднее на сообщение". — **Acceptance:** в output `format_dashboard` есть эта строка; существующие тесты `test_analytics.py` зелёные; один новый тест на эту строку.
 - [ ] T-08 | feature | Команда `/clear` — алиас для `/reset` (делает то же самое). — **Acceptance:** `/clear` в `on_message` вызывает `handle_reset_command`; тест проверяет что `/clear` распарсится и попадёт в ту же ветку.
 

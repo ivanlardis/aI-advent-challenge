@@ -55,6 +55,19 @@ def test_format_dashboard_with_records():
     assert "Всего сообщений" in out
 
 
+def test_format_dashboard_shows_avg_response_length():
+    """Дашборд должен показывать среднюю длину ответа в символах."""
+    records = [
+        {"total_tokens": 10, "prompt_tokens": 6, "completion_tokens": 4,
+         "input_preview": "hi", "response_length": 100},
+        {"total_tokens": 20, "prompt_tokens": 12, "completion_tokens": 8,
+         "input_preview": "hello", "response_length": 200},
+    ]
+    out = Analytics.format_dashboard(records)
+    assert "Средняя длина ответа" in out
+    assert "150" in out
+
+
 def test_get_stats_empty():
     stats = Analytics.get_stats([])
     assert stats["message_count"] == 0
